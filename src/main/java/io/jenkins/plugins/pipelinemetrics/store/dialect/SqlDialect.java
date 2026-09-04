@@ -44,4 +44,13 @@ public interface SqlDialect {
     default int maxJobFullNameLength() {
         return Integer.MAX_VALUE;
     }
+
+    /**
+     * Maximum length this dialect allows for {@code triggered_by} (e.g. {@code "user:<id>"}).
+     * Same rationale as {@link #maxJobFullNameLength()} — bounded only where the column itself
+     * is bounded (MySQL), and skipped rather than truncated for the same collision reason.
+     */
+    default int maxTriggeredByLength() {
+        return Integer.MAX_VALUE;
+    }
 }

@@ -135,6 +135,30 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <!-- Test-only: lets StageExtractorTest run a real `parallel` pipeline through the CPS
+           engine and inspect its actual FlowNode graph, rather than trusting hand-built
+           FlowNode mocks for a fix that specifically depends on real block-start/end pairing. -->
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-cps</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-basic-steps</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-durable-task-step</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- Provides the `stage(...)` step for the scripted-pipeline test fixture. -->
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>pipeline-stage-step</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <!-- Real-engine dialect parity tests (*IT classes). Always resolvable/compilable, but only
            actually run under the "db-it" profile (see below): Surefire's default include
            patterns skip *IT.java, and Failsafe (which does run them) isn't bound outside that

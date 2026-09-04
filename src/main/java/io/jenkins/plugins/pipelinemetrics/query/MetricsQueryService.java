@@ -6,7 +6,6 @@ import io.jenkins.plugins.pipelinemetrics.store.dialect.SqlDialect;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -127,34 +126,20 @@ public class MetricsQueryService {
     }
 
     public JSONArray stages(String job, int days, String folder, String agent, String user) throws SQLException {
-        List<String> parts = new ArrayList<>();
-        List<Object> params = new ArrayList<>();
-        parts.add("b.timestamp_ms >= ?");
-        params.add(System.currentTimeMillis() - Duration.ofDays(days).toMillis());
+        // Reuses FilterSet's folder/agent/user WHERE-building (including the built-in/master
+        // agent-alias rule) instead of re-deriving it here, so that logic has exactly one home.
+        FilterSet f = new FilterSet(days, folder, agent, user);
+        FilterSet.Where w = f.where(0, "b");
+        String whereSql = w.sql;
+        List<Object> params = new ArrayList<>(w.params);
         if (job != null && !job.isEmpty()) {
-            parts.add("b.job_full_name = ?");
+            whereSql += " AND b.job_full_name = ?";
             params.add(job);
-        }
-        if (folder != null && !folder.isEmpty()) {
-            parts.add("b.job_folder = ?");
-            params.add(folder);
-        }
-        if (agent != null && !agent.isEmpty()) {
-            if ("built-in".equals(agent) || "master".equals(agent)) {
-                parts.add("(b.built_on = '' OR b.built_on = 'master' OR b.built_on = 'built-in')");
-            } else {
-                parts.add("b.built_on = ?");
-                params.add(agent);
-            }
-        }
-        if (user != null && !user.isEmpty()) {
-            parts.add("b.triggered_by = ?");
-            params.add(user);
         }
         String sql = "SELECT s.stage_name, COUNT(*) run_count, AVG(s.duration_ms) avg_duration_ms,"
                 + " MAX(s.duration_ms) max_duration_ms,"
                 + " ROUND(SUM(CASE WHEN s.status IN ('FAILED','ERROR') THEN 1 ELSE 0 END)*1.0/COUNT(*),3) failure_rate"
-                + " FROM stages s JOIN builds b ON s.build_id=b.id WHERE " + String.join(" AND ", parts)
+                + " FROM stages s JOIN builds b ON s.build_id=b.id " + whereSql
                 + " GROUP BY s.stage_name ORDER BY avg_duration_ms DESC";
         return rows(sql, params);
     }

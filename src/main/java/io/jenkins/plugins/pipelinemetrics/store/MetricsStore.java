@@ -195,12 +195,21 @@ public class MetricsStore {
         }
     }
 
-    /** Atomically upsert the build and replace its stages. */
-    public void upsertBuild(@NonNull BuildRecord b) {
+    /** What {@link #upsertBuild} did. */
+    public enum UpsertOutcome { INSERTED, UPDATED, FAILED }
+
+    /**
+     * Atomically upsert the build and replace its stages. Existence is checked once, inside the
+     * same transaction as the write, so the returned outcome is race-free — callers that need to
+     * report insert/update counts (import, migration) should use this return value instead of
+     * running their own separate existence check before calling this method.
+     */
+    @NonNull
+    public UpsertOutcome upsertBuild(@NonNull BuildRecord b) {
         if (!available) {
             LOGGER.log(Level.WARNING, "Metrics store unavailable, dropping build {0}#{1}",
                     new Object[] {b.getJobFullName(), b.getBuildNumber()});
-            return;
+            return UpsertOutcome.FAILED;
         }
         if (b.getJobFullName() != null && b.getJobFullName().length() > dialect.maxJobFullNameLength()) {
             // Truncating would risk colliding two different jobs' paths onto the same key.
@@ -208,11 +217,19 @@ public class MetricsStore {
                     "Job path exceeds the {0} dialect''s {1}-character limit, dropping build {2}#{3}",
                     new Object[] {dialect.id(), dialect.maxJobFullNameLength(),
                             b.getJobFullName(), b.getBuildNumber()});
-            return;
+            return UpsertOutcome.FAILED;
+        }
+        if (b.getTriggeredBy() != null && b.getTriggeredBy().length() > dialect.maxTriggeredByLength()) {
+            LOGGER.log(Level.WARNING,
+                    "Triggered-by value exceeds the {0} dialect''s {1}-character limit, dropping build {2}#{3}",
+                    new Object[] {dialect.id(), dialect.maxTriggeredByLength(),
+                            b.getJobFullName(), b.getBuildNumber()});
+            return UpsertOutcome.FAILED;
         }
         try (Connection c = dataSource.getConnection()) {
             c.setAutoCommit(false);
             try {
+                long existingId = lookupId(c, b.getJobFullName(), b.getBuildNumber());
                 try (PreparedStatement ps = c.prepareStatement(dialect.upsertBuildSql())) {
                     ps.setString(1, b.getJobFullName());
                     ps.setString(2, b.getJobFolder());
@@ -227,15 +244,7 @@ public class MetricsStore {
                     ps.setString(11, b.getTriggeredBy());
                     ps.executeUpdate();
                 }
-                long buildId;
-                try (PreparedStatement ps = c.prepareStatement(
-                        "SELECT id FROM builds WHERE job_full_name=? AND build_number=?")) {
-                    ps.setString(1, b.getJobFullName());
-                    ps.setInt(2, b.getBuildNumber());
-                    try (ResultSet rs = ps.executeQuery()) {
-                        buildId = rs.next() ? rs.getLong(1) : -1;
-                    }
-                }
+                long buildId = existingId > 0 ? existingId : lookupId(c, b.getJobFullName(), b.getBuildNumber());
                 if (buildId > 0) {
                     try (PreparedStatement del = c.prepareStatement("DELETE FROM stages WHERE build_id=?")) {
                         del.setLong(1, buildId);
@@ -258,10 +267,12 @@ public class MetricsStore {
                     }
                 }
                 c.commit();
+                return existingId > 0 ? UpsertOutcome.UPDATED : UpsertOutcome.INSERTED;
             } catch (SQLException e) {
                 rollbackQuietly(c);
                 LOGGER.log(Level.WARNING,
                         "Failed to store build " + b.getJobFullName() + "#" + b.getBuildNumber(), e);
+                return UpsertOutcome.FAILED;
             } finally {
                 restoreAutoCommit(c);
             }
@@ -269,6 +280,18 @@ public class MetricsStore {
             LOGGER.log(Level.WARNING,
                     "Failed to obtain a connection while storing build "
                             + b.getJobFullName() + "#" + b.getBuildNumber(), e);
+            return UpsertOutcome.FAILED;
+        }
+    }
+
+    private static long lookupId(Connection c, String jobFullName, int buildNumber) throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement(
+                "SELECT id FROM builds WHERE job_full_name=? AND build_number=?")) {
+            ps.setString(1, jobFullName);
+            ps.setInt(2, buildNumber);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : -1;
+            }
         }
     }
 

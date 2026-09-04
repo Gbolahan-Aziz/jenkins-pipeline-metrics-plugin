@@ -1,13 +1,23 @@
 package io.jenkins.plugins.pipelinemetrics.store.backend;
 
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.Descriptor;
+import hudson.security.ACL;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 import hudson.util.Secret;
+import io.jenkins.plugins.pipelinemetrics.PipelineMetricsPermissions;
 import io.jenkins.plugins.pipelinemetrics.credentials.CredentialsResolver;
 import java.sql.SQLException;
+import java.util.Collections;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Shared shape for the external client-server backends (Postgres, MySQL/MariaDB): a host/port/
@@ -28,10 +38,22 @@ public abstract class JdbcStorageBackend extends StorageBackend {
     private int maxPoolSize = DEFAULT_POOL_SIZE;
 
     protected JdbcStorageBackend(String host, int port, String database, String credentialsId) {
-        this.host = host == null ? "" : host;
+        if (host == null || host.trim().isEmpty()) {
+            throw new IllegalArgumentException("host must not be empty");
+        }
+        if (port < 1 || port > 65535) {
+            throw new IllegalArgumentException("port must be between 1 and 65535");
+        }
+        if (database == null || database.trim().isEmpty()) {
+            throw new IllegalArgumentException("database must not be empty");
+        }
+        if (credentialsId == null || credentialsId.trim().isEmpty()) {
+            throw new IllegalArgumentException("credentialsId must not be empty");
+        }
+        this.host = host;
         this.port = port;
-        this.database = database == null ? "" : database;
-        this.credentialsId = credentialsId == null ? "" : credentialsId;
+        this.database = database;
+        this.credentialsId = credentialsId;
     }
 
     public String getHost() {
@@ -102,5 +124,45 @@ public abstract class JdbcStorageBackend extends StorageBackend {
     public String describe() {
         return dialect().id() + "://" + host + ":" + port + "/" + database
                 + (useSsl ? " (TLS)" : " (no TLS)");
+    }
+
+    /**
+     * Shared descriptor behavior for every JDBC backend — pool-size/credentials-id validation
+     * and the credentials listbox. Only {@link Descriptor#getDisplayName()} differs per backend,
+     * so concrete {@code DescriptorImpl}s extend this instead of re-implementing it three times.
+     */
+    public abstract static class JdbcBackendDescriptor extends Descriptor<StorageBackend> {
+
+        public FormValidation doCheckMaxPoolSize(@QueryParameter String value) {
+            try {
+                int n = Integer.parseInt(value.trim());
+                if (n < MIN_POOL_SIZE || n > MAX_POOL_SIZE) {
+                    return FormValidation.error("Value must be between " + MIN_POOL_SIZE + " and " + MAX_POOL_SIZE);
+                }
+                return FormValidation.ok();
+            } catch (NumberFormatException e) {
+                return FormValidation.error("Enter a whole number");
+            }
+        }
+
+        public FormValidation doCheckCredentialsId(@QueryParameter String value) {
+            Jenkins.get().checkPermission(PipelineMetricsPermissions.CONFIGURE);
+            if (value == null || value.isEmpty()) {
+                return FormValidation.error("Select a credentials ID");
+            }
+            return FormValidation.ok();
+        }
+
+        public ListBoxModel doFillCredentialsIdItems(@QueryParameter String credentialsId) {
+            Jenkins jenkins = Jenkins.get();
+            StandardListBoxModel result = new StandardListBoxModel();
+            if (!jenkins.hasPermission(PipelineMetricsPermissions.CONFIGURE)) {
+                return result.includeCurrentValue(credentialsId);
+            }
+            return result.includeEmptyValue()
+                    .includeMatchingAs(ACL.SYSTEM2, jenkins, StandardUsernamePasswordCredentials.class,
+                            Collections.emptyList(), CredentialsMatchers.always())
+                    .includeCurrentValue(credentialsId);
+        }
     }
 }

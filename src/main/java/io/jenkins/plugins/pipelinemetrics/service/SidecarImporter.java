@@ -41,10 +41,6 @@ public class SidecarImporter {
         SQLiteDataSource ds = new SQLiteDataSource(config);
         ds.setUrl("jdbc:sqlite:" + f.getAbsolutePath());
 
-        int read = 0;
-        int inserted = 0;
-        int updated = 0;
-        int skipped = 0;
         MetricsStore store = MetricsStore.get();
 
         try (Connection src = ds.getConnection()) {
@@ -58,44 +54,13 @@ public class SidecarImporter {
                             "SELECT id, job_full_name, job_folder, job_name, build_number, result, "
                             + "duration_ms, queue_time_ms, timestamp_ms, built_on, node_labels, triggered_by "
                             + "FROM builds")) {
-                while (rs.next()) {
-                    read++;
-                    try {
-                        BuildRecord b = new BuildRecord();
-                        b.setJobFullName(rs.getString("job_full_name"));
-                        b.setJobFolder(nz(rs.getString("job_folder")));
-                        b.setJobName(nz(rs.getString("job_name")));
-                        b.setBuildNumber(rs.getInt("build_number"));
-                        b.setResult(rs.getString("result"));
-                        b.setDurationMs(rs.getLong("duration_ms"));
-                        b.setQueueTimeMs(rs.getLong("queue_time_ms"));
-                        b.setTimestampMs(rs.getLong("timestamp_ms"));
-                        b.setBuiltOn(nz(rs.getString("built_on")));
-                        b.setNodeLabels(nz(rs.getString("node_labels")));
-                        b.setTriggeredBy(nz(rs.getString("triggered_by")));
-                        if (b.getJobFullName() == null || b.getJobFullName().isEmpty()) {
-                            skipped++;
-                            continue;
-                        }
-                        loadStages(src, rs.getLong("id"), b);
-                        boolean exists = exists(store, b.getJobFullName(), b.getBuildNumber());
-                        store.upsertBuild(b);
-                        if (exists) {
-                            updated++;
-                        } else {
-                            inserted++;
-                        }
-                    } catch (RuntimeException e) {
-                        skipped++;
-                        LOGGER.log(Level.FINE, "Skipping sidecar row", e);
-                    }
-                }
+                RowCopier.Counts counts = RowCopier.copy(rs, (buildId, b) -> loadStages(src, buildId, b), store);
+                out.put("status", "ok");
+                out.put("read", counts.read);
+                out.put("inserted", counts.inserted);
+                out.put("updated", counts.updated);
+                out.put("skipped", counts.skipped);
             }
-            out.put("status", "ok");
-            out.put("read", read);
-            out.put("inserted", inserted);
-            out.put("updated", updated);
-            out.put("skipped", skipped);
         } catch (SQLException e) {
             out.put("status", "error");
             out.put("message", "Could not read SQLite database: " + e.getMessage());
@@ -111,7 +76,7 @@ public class SidecarImporter {
                 int seq = 0;
                 while (rs.next()) {
                     b.getStages().add(new StageRecord(
-                            nz(rs.getString("stage_name")), rs.getString("status"),
+                            RowCopier.nz(rs.getString("stage_name")), rs.getString("status"),
                             rs.getLong("duration_ms"), seq++));
                 }
             }
@@ -121,32 +86,11 @@ public class SidecarImporter {
         }
     }
 
-    private static boolean exists(MetricsStore store, String jobFullName, int buildNumber) {
-        try {
-            return store.query(conn -> {
-                try (PreparedStatement ps = conn.prepareStatement(
-                        "SELECT 1 FROM builds WHERE job_full_name=? AND build_number=?")) {
-                    ps.setString(1, jobFullName);
-                    ps.setInt(2, buildNumber);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        return rs.next();
-                    }
-                }
-            });
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
     private static boolean hasBuildsTable(Connection src) throws SQLException {
         try (Statement st = src.createStatement();
                 ResultSet rs = st.executeQuery(
                         "SELECT name FROM sqlite_master WHERE type='table' AND name='builds'")) {
             return rs.next();
         }
-    }
-
-    private static String nz(String s) {
-        return s == null ? "" : s;
     }
 }

@@ -37,6 +37,13 @@ public class NetworkStorageMonitor extends AdministrativeMonitor {
             "nfs", "nfs3", "nfs4", "nfsd", "cifs", "smb", "smb2", "smbfs",
             "glusterfs", "ceph", "9p", "afs", "fuse.sshfs", "fuse.efs"));
 
+    // Jenkins core polls isActivated() on essentially every admin page render, but the
+    // filesystem type of a fixed directory doesn't change during a JVM's lifetime, so the
+    // syscall-backed detection below runs at most once per instance and is cached after that.
+    // A benign race computing it twice on first use is fine — cheap, deterministic, idempotent.
+    private volatile boolean fileStoreTypeCached;
+    private volatile String cachedFileStoreType;
+
     @Override
     public boolean isActivated() {
         PipelineMetricsGlobalConfig config = PipelineMetricsGlobalConfig.get();
@@ -54,16 +61,23 @@ public class NetworkStorageMonitor extends AdministrativeMonitor {
         return fsType != null && NETWORK_FS_TYPES.contains(fsType.toLowerCase(Locale.ROOT));
     }
 
-    private static String detectFileStoreType() {
+    private String detectFileStoreType() {
+        if (fileStoreTypeCached) {
+            return cachedFileStoreType;
+        }
+        String type;
         try {
             File dir = new File(Jenkins.get().getRootDir(), "pipeline-metrics");
             Files.createDirectories(dir.toPath());
-            return Files.getFileStore(dir.toPath()).type();
+            type = Files.getFileStore(dir.toPath()).type();
         } catch (IOException | RuntimeException e) {
             // Best-effort: an inability to detect the filesystem type must never misfire the
             // warning, and must never delay or break Jenkins startup.
-            return null;
+            type = null;
         }
+        cachedFileStoreType = type;
+        fileStoreTypeCached = true;
+        return type;
     }
 
     /** Best-effort hint about the surrounding environment, for the warning message only. */

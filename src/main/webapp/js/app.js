@@ -127,8 +127,11 @@ async function loadKPIs(f) {
     const psr = pt ? (d.prev_successful/pt*100) : null;
     const pfr = pt ? (d.prev_failed/pt*100) : null;
     document.getElementById('k-total-delta').innerHTML = deltaHTML(t, pt);
-    document.getElementById('k-success-delta').innerHTML = sr && psr!=null ? deltaHTML(sr, psr) : '';
-    document.getElementById('k-fail-delta').innerHTML = fr && pfr!=null ? deltaHTML(fr, pfr, {invert:true}) : '';
+    // Gate on `t` (were there any builds this period), not on `sr`/`fr` themselves: a
+    // legitimate 0% success or failure rate is falsy in JS and would otherwise hide the delta
+    // exactly when it's most newsworthy (e.g. a drop from 95% to 0% success).
+    document.getElementById('k-success-delta').innerHTML = t && psr!=null ? deltaHTML(sr, psr) : '';
+    document.getElementById('k-fail-delta').innerHTML = t && pfr!=null ? deltaHTML(fr, pfr, {invert:true}) : '';
     document.getElementById('k-dur-delta').innerHTML = deltaHTML(d.avg_duration_ms, d.prev_avg_duration_ms, {invert:true});
 }
 

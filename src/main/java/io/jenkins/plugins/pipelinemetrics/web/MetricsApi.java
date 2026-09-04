@@ -2,6 +2,7 @@ package io.jenkins.plugins.pipelinemetrics.web;
 
 import com.zaxxer.hikari.HikariDataSource;
 import io.jenkins.plugins.pipelinemetrics.PipelineMetricsPermissions;
+import io.jenkins.plugins.pipelinemetrics.config.PipelineMetricsGlobalConfig;
 import io.jenkins.plugins.pipelinemetrics.query.CsvReport;
 import io.jenkins.plugins.pipelinemetrics.query.FilterSet;
 import io.jenkins.plugins.pipelinemetrics.query.MetricsQueryService;
@@ -72,6 +73,10 @@ public class MetricsApi {
         }
         String sort = param(req, "sort", "avg_duration");
         int limit = intParam(req, "limit", 20);
+        if (limit < 1 || limit > 1000) {
+            writeError(rsp, 400, "limit must be between 1 and 1000");
+            return;
+        }
         run(rsp, () -> query.pipelines(f, sort, limit));
     }
 
@@ -89,6 +94,10 @@ public class MetricsApi {
     public void doStages(StaplerRequest req, StaplerResponse rsp) throws IOException {
         checkView();
         int days = intParam(req, "days", 30);
+        if (!isValidDays(days)) {
+            writeError(rsp, 400, "days must be between 1 and 365");
+            return;
+        }
         run(rsp, () -> query.stages(param(req, "job", ""), days,
                 param(req, "folder", ""), param(req, "agent", ""), param(req, "user", "")));
     }
@@ -143,8 +152,12 @@ public class MetricsApi {
     @POST
     public void doBackfill(StaplerRequest req, StaplerResponse rsp) throws IOException {
         Jenkins.get().checkPermission(PipelineMetricsPermissions.CONFIGURE);
-        int limit = io.jenkins.plugins.pipelinemetrics.config.PipelineMetricsGlobalConfig.get().getBackfillLimit();
-        boolean started = BackfillService.get().start(limit);
+        PipelineMetricsGlobalConfig config = PipelineMetricsGlobalConfig.get();
+        if (config == null) {
+            writeError(rsp, 503, "Pipeline Metrics configuration is not ready yet");
+            return;
+        }
+        boolean started = BackfillService.get().start(config.getBackfillLimit());
         JSONObject out = new JSONObject();
         out.put("status", started ? "started" : "already_running");
         writeJson(rsp, out);
@@ -193,7 +206,11 @@ public class MetricsApi {
             } finally {
                 source.close();
             }
-        } catch (SQLException e) {
+        } catch (SQLException | RuntimeException e) {
+            // RuntimeException too: createDataSource() can throw an unchecked pool-init failure
+            // (see JdbcStorageBackend's initializationFailTimeout note) — must not escape as an
+            // unhandled 500 with a stack trace when every other caller of createDataSource()
+            // already guards against exactly this.
             writeError(rsp, 500, "Could not open the local SQLite store: " + e.getMessage());
         }
     }
@@ -218,11 +235,15 @@ public class MetricsApi {
 
     private static FilterSet parse(StaplerRequest req, StaplerResponse rsp) throws IOException {
         int days = intParam(req, "days", 30);
-        if (days < 1 || days > 365) {
+        if (!isValidDays(days)) {
             writeError(rsp, 400, "days must be between 1 and 365");
             return null;
         }
         return new FilterSet(days, param(req, "folder", ""), param(req, "agent", ""), param(req, "user", ""));
+    }
+
+    private static boolean isValidDays(int days) {
+        return days >= 1 && days <= 365;
     }
 
     private static String param(StaplerRequest req, String name, String def) {

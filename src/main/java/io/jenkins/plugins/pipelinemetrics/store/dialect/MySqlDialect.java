@@ -14,6 +14,9 @@ public final class MySqlDialect implements SqlDialect {
     /** Matches the DDL's {@code VARCHAR(512)} bound on {@code job_full_name}. */
     public static final int JOB_FULL_NAME_MAX_LENGTH = 512;
 
+    /** Matches the DDL's {@code VARCHAR(512)} bound on {@code triggered_by}. */
+    public static final int TRIGGERED_BY_MAX_LENGTH = 512;
+
     @Override
     public String id() {
         return "mysql";
@@ -22,6 +25,11 @@ public final class MySqlDialect implements SqlDialect {
     @Override
     public int maxJobFullNameLength() {
         return JOB_FULL_NAME_MAX_LENGTH;
+    }
+
+    @Override
+    public int maxTriggeredByLength() {
+        return TRIGGERED_BY_MAX_LENGTH;
     }
 
     @Override
@@ -39,7 +47,7 @@ public final class MySqlDialect implements SqlDialect {
                         + "timestamp_ms BIGINT NOT NULL,"
                         + "built_on TEXT,"
                         + "node_labels TEXT,"
-                        + "triggered_by VARCHAR(512) DEFAULT '',"
+                        + "triggered_by VARCHAR(" + TRIGGERED_BY_MAX_LENGTH + ") DEFAULT '',"
                         + "UNIQUE KEY uq_builds_job_number (job_full_name, build_number))",
                 "CREATE TABLE stages ("
                         + "id BIGINT AUTO_INCREMENT PRIMARY KEY,"
