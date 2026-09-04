@@ -20,14 +20,13 @@ REST API). This repo is the owned, standalone home for the plugin.
   agents, stages, heatmap, and users views — plus CSV export.
 - Gated by dedicated `PipelineMetrics/View` and `PipelineMetrics/Configure` permissions.
 - Configurable via JCasC and the management UI.
-- Migrates data from the original sidecar, from local SQLite to an external database (or back),
-  and backfills history from Jenkins.
+- Migrates data between storage backends (local SQLite ↔ external database) and backfills
+  history directly from Jenkins.
 - Warns (never auto-switches) when local SQLite looks like it's running on network-backed
   storage, where its write-ahead log is not reliably safe.
 
 ## Repository layout
 
-- `.kiro/specs/jenkins-pipeline-metrics-plugin/` — the living spec (requirements, design, tasks).
 - `reference/pipeline-metrics-sidecar/` — the original Python sidecar, kept as the parity
   reference for the plugin's behaviour and analytics.
 
@@ -55,7 +54,7 @@ Either:
 1. **Plugin Manager** — Manage Jenkins → Plugins → Advanced → Deploy Plugin → upload `pipeline-metrics.hpi`, then restart.
 2. **Baked into the image** — copy the `.hpi` into `$JENKINS_HOME/plugins/` (or add it to your image's plugin list) and restart.
 
-The dashboard appears in the left sidebar as **Pipeline Metrics** for users holding the `PipelineMetrics/View` permission. Metrics are captured automatically as builds finish; existing history can be imported/backfilled from the API.
+The dashboard appears in the left sidebar as **Pipeline Metrics** for users holding the `PipelineMetrics/View` permission. Metrics are captured automatically as builds finish; existing history can be backfilled directly from Jenkins via the API.
 
 ## Configuration (JCasC)
 
@@ -148,9 +147,3 @@ configured. It's safe to run more than once (upserts by job + build number).
 
 All state lives under `$JENKINS_HOME/pipeline-metrics/` for the local SQLite backend, or in
 whichever external database you've configured. See [Storage backends](#storage-backends).
-
-## Migrating from the sidecar
-
-1. Install the plugin (new builds are captured immediately).
-2. Copy the sidecar's `metrics.db` onto the controller and POST its path to `pipeline-metrics/api/import`.
-3. Trigger a backfill (`pipeline-metrics/api/backfill`) to capture anything the import missed.
