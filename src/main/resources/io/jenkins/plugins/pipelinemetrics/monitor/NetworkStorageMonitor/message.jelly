@@ -1,0 +1,16 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
+  <div class="alert alert-warning">
+    <strong>Pipeline Metrics</strong> is using its embedded SQLite storage backend, but
+    <code>$JENKINS_HOME/pipeline-metrics</code> appears to be on a network filesystem
+    (<j:if test="${it.environmentHint() != ''}">${it.environmentHint()} </j:if>detected via the
+    filesystem type). SQLite's write-ahead log depends on file-locking behavior that many network
+    filesystems (NFS, EFS, CIFS, ...) do not implement reliably — this can cause write stalls or
+    data corruption rather than just slower performance. It is also not safe if more than one
+    Jenkins controller process ever shares this data.
+    <br/>
+    Consider switching to an external PostgreSQL or MySQL/MariaDB backend under
+    <a href="${rootURL}/manage/configure">Manage Jenkins &#8250; System &#8250; Pipeline Metrics
+    &#8250; Storage backend</a>.
+  </div>
+</j:jelly>

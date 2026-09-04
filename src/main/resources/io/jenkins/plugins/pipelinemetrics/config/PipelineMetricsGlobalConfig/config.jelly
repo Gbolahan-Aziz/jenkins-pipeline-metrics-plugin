@@ -1,0 +1,22 @@
+<?jelly escape-by-default='false'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <f:section title="Pipeline Metrics">
+    <f:entry title="Enable collection" field="collectionEnabled">
+      <f:checkbox default="true"/>
+    </f:entry>
+    <f:entry title="Retention (days)" field="retentionDays"
+             description="Build records older than this are deleted (1–365).">
+      <f:number clazz="required" min="1" max="365" default="90"/>
+    </f:entry>
+    <f:entry title="Backfill build limit (per job)" field="backfillLimit"
+             description="Maximum builds imported per job during backfill (0–10000).">
+      <f:number clazz="required" min="0" max="10000" default="100"/>
+    </f:entry>
+    <f:entry title="Storage backend" field="storageBackend"
+             description="Where build/stage records are stored. Local SQLite needs no setup but
+                          is not safe on network-backed $JENKINS_HOME (NFS/EFS) or shared by more
+                          than one controller — pick an external database for those cases.">
+      <f:dropdownDescriptorSelector field="storageBackend" descriptors="${instance.storageBackendDescriptors}"/>
+    </f:entry>
+  </f:section>
+</j:jelly>

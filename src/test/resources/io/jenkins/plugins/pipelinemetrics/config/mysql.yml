@@ -1,0 +1,24 @@
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: SYSTEM
+              id: "pipeline-metrics-db"
+              username: "dbuser"
+              password: "s3cret"
+              description: "Pipeline Metrics DB"
+
+unclassified:
+  pipelineMetrics:
+    collectionEnabled: true
+    retentionDays: 45
+    backfillLimit: 250
+    storageBackend:
+      mysql:
+        host: "mysql.internal"
+        port: 3306
+        database: "jenkins_metrics"
+        credentialsId: "pipeline-metrics-db"
+        useSsl: false
+        maxPoolSize: 8

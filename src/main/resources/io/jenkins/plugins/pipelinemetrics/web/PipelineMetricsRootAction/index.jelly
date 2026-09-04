@@ -1,0 +1,139 @@
+<?jelly escape-by-default='false'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
+  <st:contentType value="text/html;charset=UTF-8"/>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Pipeline Metrics</title>
+      <link rel="stylesheet" href="${rootURL}/plugin/pipeline-metrics/css/style.css"/>
+      <script src="${rootURL}/plugin/pipeline-metrics/js/chart.umd.min.js"/>
+    </head>
+    <body>
+      <div id="pm-config"
+           data-base="${rootURL}/pipeline-metrics/api"
+           data-root="${rootURL}/"
+           data-crumb-field="${h.crumbRequestField}"
+           data-crumb="${h.getCrumb(request)}"
+           style="display:none"></div>
+      <div class="app">
+        <div class="header">
+          <div class="brand">
+            <div class="brand-icon">⚡</div>
+            <h1>Pipeline Metrics</h1>
+          </div>
+          <div class="header-actions">
+            <a class="btn-sync" href="${rootURL}/">← Jenkins</a>
+            <div class="sync-status">
+              <div class="sync-dot"></div>
+              <span id="sync-label">Live</span>
+              <span id="last-updated" class="last-updated"></span>
+            </div>
+            <button class="btn-sync" onclick="exportCSV()">⬇ Export CSV</button>
+            <button class="btn-sync" onclick="triggerSync()">↻ Sync Now</button>
+            <j:if test="${it.canConfigure}">
+              <button class="btn-sync" onclick="triggerBackfill()" id="btn-backfill">⤓ Backfill</button>
+              <button class="btn-sync" onclick="triggerImport()">⇪ Import…</button>
+              <button class="btn-sync" onclick="triggerStorageMigration()">⇄ Migrate storage…</button>
+            </j:if>
+          </div>
+        </div>
+
+        <div class="filters">
+          <div class="filter-pill">
+            <select id="f-folder" onchange="refresh()"><option value="">All Environments</option></select>
+          </div>
+          <div class="filter-pill">
+            <select id="f-agent" onchange="refresh()"><option value="">All Agents</option></select>
+          </div>
+          <div class="filter-pill">
+            <select id="f-user" onchange="refresh()"><option value="">All Users</option></select>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-pill">
+            <select id="f-days" onchange="refresh()">
+              <option value="7">7 days</option>
+              <option value="30" selected="selected">30 days</option>
+              <option value="90">90 days</option>
+              <option value="180">6 months</option>
+              <option value="365">1 year</option>
+            </select>
+          </div>
+          <div class="filter-pill">
+            <select id="f-group" onchange="refresh()">
+              <option value="day">Daily</option>
+              <option value="week">Weekly</option>
+              <option value="hour">Hourly</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="kpi-row">
+          <div class="glass kpi"><div class="kpi-label">Total Builds</div><div class="kpi-value blue" id="k-total">—</div><div class="kpi-sub" id="k-total-sub"></div><div class="kpi-delta" id="k-total-delta"></div></div>
+          <div class="glass kpi"><div class="kpi-label">Success Rate</div><div class="kpi-value green" id="k-success">—</div><div class="kpi-sub" id="k-success-sub"></div><div class="kpi-delta" id="k-success-delta"></div></div>
+          <div class="glass kpi"><div class="kpi-label">Failure Rate</div><div class="kpi-value red" id="k-fail">—</div><div class="kpi-sub" id="k-fail-sub"></div><div class="kpi-delta" id="k-fail-delta"></div></div>
+          <div class="glass kpi"><div class="kpi-label">Avg Duration</div><div class="kpi-value" id="k-dur">—</div><div class="kpi-delta" id="k-dur-delta"></div></div>
+          <div class="glass kpi"><div class="kpi-label">Avg Queue</div><div class="kpi-value" id="k-queue">—</div></div>
+          <div class="glass kpi"><div class="kpi-label">Slowest</div><div class="kpi-value yellow" id="k-max">—</div></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="glass panel">
+            <div class="panel-header"><div><div class="panel-title">Build Volume</div><div class="panel-subtitle">Success vs failures over time</div></div></div>
+            <canvas id="chart-volume"></canvas>
+          </div>
+          <div class="glass panel">
+            <div class="panel-header"><div><div class="panel-title">Duration Trend</div><div class="panel-subtitle">Average build time per period</div></div></div>
+            <canvas id="chart-duration"></canvas>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="glass panel">
+            <div class="panel-header"><div><div class="panel-title">Activity Heatmap</div><div class="panel-subtitle">Build frequency by day and hour</div></div></div>
+            <div class="heatmap-grid" id="heatmap"></div>
+          </div>
+          <div class="glass panel">
+            <div class="panel-header"><div><div class="panel-title">Top Triggerers</div><div class="panel-subtitle">Who triggers builds</div></div></div>
+            <div id="users-list"></div>
+          </div>
+        </div>
+
+        <div class="tabs-row">
+          <div class="tabs">
+            <div class="tab active" data-tab="pipelines" onclick="switchTab(this)">Pipelines</div>
+            <div class="tab" data-tab="agents" onclick="switchTab(this)">Agents</div>
+            <div class="tab" data-tab="stages" onclick="switchTab(this)">Stages</div>
+          </div>
+          <input id="tbl-search" class="tbl-search" type="text" placeholder="Filter rows…" oninput="filterActiveTable()"/>
+        </div>
+
+        <div id="tab-pipelines">
+          <div class="glass table-panel">
+            <table>
+              <thead><tr><th>Pipeline</th><th>Env</th><th>Builds</th><th>Avg Duration</th><th>Max</th><th>Queue</th><th>Failure Rate</th></tr></thead>
+              <tbody id="tbl-pipelines"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="tab-agents" style="display:none">
+          <div class="glass table-panel">
+            <table>
+              <thead><tr><th>Agent</th><th>Labels</th><th>Builds</th><th>Avg Duration</th><th>Failure Rate</th><th>Busy Time</th></tr></thead>
+              <tbody id="tbl-agents"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="tab-stages" style="display:none">
+          <div class="glass table-panel">
+            <table>
+              <thead><tr><th>Stage</th><th>Runs</th><th>Avg Duration</th><th>Max</th><th>Failure Rate</th></tr></thead>
+              <tbody id="tbl-stages"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <script src="${rootURL}/plugin/pipeline-metrics/js/app.js"/>
+    </body>
+  </html>
+</j:jelly>

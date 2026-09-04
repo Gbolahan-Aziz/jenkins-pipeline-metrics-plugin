@@ -1,0 +1,28 @@
+# Maven / Java build output (plugin build lands here later)
+target/
+*.hpi
+*.jpi
+*.class
+
+# IDE
+.idea/
+*.iml
+.settings/
+.classpath
+.project
+.vscode/
+
+# Python sidecar reference
+__pycache__/
+*.pyc
+*.db
+*.sqlite
+*.sqlite3
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# Kiro spec-workflow scaffolding (internal planning artifacts, not part of the shipped plugin)
+.kiro/

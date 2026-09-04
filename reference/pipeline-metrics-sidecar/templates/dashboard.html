@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Metrics</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="brand">
+            <div class="brand-icon">⚡</div>
+            <h1>Pipeline Metrics</h1>
+        </div>
+        <div class="header-actions">
+            <div class="sync-status">
+                <div class="sync-dot"></div>
+                <span id="sync-label">Live</span>
+                <span id="last-updated" class="last-updated"></span>
+            </div>
+            <button class="btn-sync" onclick="exportCSV()">⬇ Export CSV</button>
+            <button class="btn-sync" onclick="triggerSync()">↻ Sync Now</button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+        <div class="filter-pill">
+            <select id="f-folder" onchange="refresh()">
+                <option value="">All Environments</option>
+            </select>
+        </div>
+        <div class="filter-pill">
+            <select id="f-agent" onchange="refresh()">
+                <option value="">All Agents</option>
+            </select>
+        </div>
+        <div class="filter-pill">
+            <select id="f-user" onchange="refresh()">
+                <option value="">All Users</option>
+            </select>
+        </div>
+        <div class="filter-sep"></div>
+        <div class="filter-pill">
+            <select id="f-days" onchange="refresh()">
+                <option value="7">7 days</option>
+                <option value="30" selected>30 days</option>
+                <option value="90">90 days</option>
+                <option value="180">6 months</option>
+                <option value="365">1 year</option>
+            </select>
+        </div>
+        <div class="filter-pill">
+            <select id="f-group" onchange="refresh()">
+                <option value="day">Daily</option>
+                <option value="week">Weekly</option>
+                <option value="hour">Hourly</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+        <div class="glass kpi">
+            <div class="kpi-label">Total Builds</div>
+            <div class="kpi-value blue" id="k-total">—</div>
+            <div class="kpi-sub" id="k-total-sub"></div>
+            <div class="kpi-delta" id="k-total-delta"></div>
+        </div>
+        <div class="glass kpi">
+            <div class="kpi-label">Success Rate</div>
+            <div class="kpi-value green" id="k-success">—</div>
+            <div class="kpi-sub" id="k-success-sub"></div>
+            <div class="kpi-delta" id="k-success-delta"></div>
+        </div>
+        <div class="glass kpi">
+            <div class="kpi-label">Failure Rate</div>
+            <div class="kpi-value red" id="k-fail">—</div>
+            <div class="kpi-sub" id="k-fail-sub"></div>
+            <div class="kpi-delta" id="k-fail-delta"></div>
+        </div>
+        <div class="glass kpi">
+            <div class="kpi-label">Avg Duration</div>
+            <div class="kpi-value" id="k-dur">—</div>
+            <div class="kpi-delta" id="k-dur-delta"></div>
+        </div>
+        <div class="glass kpi">
+            <div class="kpi-label">Avg Queue</div>
+            <div class="kpi-value" id="k-queue">—</div>
+        </div>
+        <div class="glass kpi">
+            <div class="kpi-label">Slowest</div>
+            <div class="kpi-value yellow" id="k-max">—</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid-2">
+        <div class="glass panel">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">Build Volume</div>
+                    <div class="panel-subtitle">Success vs failures over time</div>
+                </div>
+            </div>
+            <canvas id="chart-volume"></canvas>
+        </div>
+        <div class="glass panel">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">Duration Trend</div>
+                    <div class="panel-subtitle">Average build time per period</div>
+                </div>
+            </div>
+            <canvas id="chart-duration"></canvas>
+        </div>
+    </div>
+
+    <!-- Heatmap + Users -->
+    <div class="grid-3">
+        <div class="glass panel">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">Activity Heatmap</div>
+                    <div class="panel-subtitle">Build frequency by day & hour</div>
+                </div>
+            </div>
+            <div class="heatmap-grid" id="heatmap"></div>
+            <div class="heatmap-legend">
+                <span>Less</span>
+                <div class="heatmap-legend-cell" style="background:rgba(255,255,255,0.03)"></div>
+                <div class="heatmap-legend-cell" style="background:rgba(63,185,80,0.2)"></div>
+                <div class="heatmap-legend-cell" style="background:rgba(63,185,80,0.4)"></div>
+                <div class="heatmap-legend-cell" style="background:rgba(63,185,80,0.6)"></div>
+                <div class="heatmap-legend-cell" style="background:rgba(63,185,80,0.85)"></div>
+                <span>More</span>
+                <div class="heatmap-legend-cell" style="background:rgba(248,81,73,0.5);margin-left:8px"></div>
+                <span>Failures</span>
+            </div>
+        </div>
+        <div class="glass panel">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">Top Triggerers</div>
+                    <div class="panel-subtitle">Who triggers builds</div>
+                </div>
+            </div>
+            <div id="users-list"></div>
+        </div>
+    </div>
+
+    <!-- Tables -->
+    <div class="tabs-row">
+        <div class="tabs">
+            <div class="tab active" data-tab="pipelines" onclick="switchTab(this)">Pipelines</div>
+            <div class="tab" data-tab="agents" onclick="switchTab(this)">Agents</div>
+            <div class="tab" data-tab="stages" onclick="switchTab(this)">Stages</div>
+        </div>
+        <input id="tbl-search" class="tbl-search" type="text" placeholder="Filter rows…" oninput="filterActiveTable()">
+    </div>
+
+    <div id="tab-pipelines">
+        <div class="glass table-panel">
+            <table>
+                <thead><tr>
+                    <th>Pipeline</th><th>Env</th><th>Builds</th>
+                    <th>Avg Duration</th><th>Max</th><th>Queue</th><th>Failure Rate</th>
+                </tr></thead>
+                <tbody id="tbl-pipelines"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab-agents" style="display:none">
+        <div class="glass table-panel">
+            <table>
+                <thead><tr>
+                    <th>Agent</th><th>Labels</th><th>Builds</th>
+                    <th>Avg Duration</th><th>Failure Rate</th><th>Busy Time</th>
+                </tr></thead>
+                <tbody id="tbl-agents"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab-stages" style="display:none">
+        <div class="glass table-panel">
+            <table>
+                <thead><tr>
+                    <th>Stage</th><th>Runs</th><th>Avg Duration</th>
+                    <th>Max</th><th>Failure Rate</th>
+                </tr></thead>
+                <tbody id="tbl-stages"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+let volChart = null, durChart = null;
+
+const F = () => ({
+    folder: document.getElementById('f-folder').value,
+    agent: document.getElementById('f-agent').value,
+    user: document.getElementById('f-user').value,
+    days: document.getElementById('f-days').value,
+    group_by: document.getElementById('f-group').value,
+});
+
+const qs = p => Object.entries(p).filter(([,v])=>v).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');
+
+function dur(ms) {
+    if (!ms) return '—';
+    const s = Math.round(ms/1000);
+    if (s < 60) return s+'s';
+    const m = Math.floor(s/60), r = s%60;
+    if (m < 60) return m+'m '+r+'s';
+    return Math.floor(m/60)+'h '+m%60+'m';
+}
+
+function num(n) {
+    if (n==null) return '—';
+    if (n>=1e6) return (n/1e6).toFixed(1)+'M';
+    if (n>=1e3) return (n/1e3).toFixed(1)+'K';
+    return n.toLocaleString();
+}
+
+function rate(r) {
+    const cls = r===0?'ok':r<20?'ok':r<40?'warn':'bad';
+    const badge = r===0?'badge-green':r<20?'badge-green':r<40?'badge-yellow':'badge-red';
+    return `<div class="rate">
+        <div class="rate-bar"><div class="rate-fill ${cls}" style="width:${Math.min(r,100)}%"></div></div>
+        <span class="badge ${badge}">${r.toFixed(1)}%</span>
+    </div>`;
+}
+
+const chartOpts = {
+    responsive:true, maintainAspectRatio:true,
+    plugins:{
+        legend:{position:'top',align:'end',labels:{color:'#484f58',font:{size:11,family:'DM Sans'},boxWidth:8,boxHeight:8,borderRadius:2,useBorderRadius:true,padding:14}},
+        tooltip:{backgroundColor:'rgba(13,17,23,0.96)',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleFont:{family:'DM Sans',size:12},bodyFont:{family:'DM Sans',size:11},padding:10,cornerRadius:10,boxWidth:8,boxHeight:8,boxPadding:4}
+    },
+    scales:{
+        x:{ticks:{color:'#484f58',font:{size:10,family:'DM Sans'}},grid:{color:'rgba(255,255,255,0.03)',drawBorder:false},border:{display:false}},
+        y:{ticks:{color:'#484f58',font:{size:10,family:'DM Sans'}},grid:{color:'rgba(255,255,255,0.03)',drawBorder:false},border:{display:false}}
+    }
+};
+
+async function loadFilters() {
+    const d = await fetch('/api/filters').then(r=>r.json());
+    const add = (sel, items, empty) => {
+        items.forEach(i => {
+            const o = document.createElement('option');
+            o.value = i || empty; o.textContent = i || empty;
+            document.getElementById(sel).appendChild(o);
+        });
+    };
+    add('f-folder', d.folders, '(root)');
+    add('f-agent', d.agents, 'built-in');
+    add('f-user', d.users, 'unknown');
+}
+
+async function refresh() {
+    const f = F();
+    await Promise.all([loadKPIs(f), loadTrends(f), loadHeatmap(f), loadUsers(f), loadPipelines(f), loadAgents(f), loadStages(f)]);
+}
+
+function deltaHTML(curr, prev, opts={}) {
+    // opts.invert: true when a lower value is the improvement (e.g. failure rate, duration)
+    if (curr == null || prev == null || !isFinite(curr) || !isFinite(prev) || prev === 0) return '';
+    const pct = ((curr - prev) / prev) * 100;
+    if (Math.abs(pct) < 0.5) return `<span class="kpi-delta-flat">flat vs prev</span>`;
+    const up = pct > 0;
+    const good = opts.invert ? !up : up;
+    const arrow = up ? '▲' : '▼';
+    return `<span class="kpi-delta-val ${good?'good':'bad'}">${arrow} ${Math.abs(pct).toFixed(0)}% vs prev ${opts.periodLabel||'period'}</span>`;
+}
+
+async function loadKPIs(f) {
+    const d = await fetch(`/api/overview?${qs(f)}`).then(r=>r.json());
+    const t = d.total_builds||0;
+    document.getElementById('k-total').textContent = num(t);
+    document.getElementById('k-total-sub').textContent = t ? `${d.successful||0} passed · ${d.failed||0} failed` : '';
+    const sr = t ? (d.successful/t*100) : 0;
+    const fr = t ? (d.failed/t*100) : 0;
+    document.getElementById('k-success').textContent = sr ? sr.toFixed(1)+'%' : '—';
+    document.getElementById('k-success-sub').textContent = sr ? `${d.successful} builds` : '';
+    document.getElementById('k-fail').textContent = fr ? fr.toFixed(1)+'%' : '—';
+    document.getElementById('k-fail-sub').textContent = fr ? `${d.failed} builds` : '';
+    document.getElementById('k-dur').textContent = dur(d.avg_duration_ms);
+    document.getElementById('k-queue').textContent = dur(d.avg_queue_time_ms);
+    document.getElementById('k-max').textContent = dur(d.max_duration_ms);
+
+    const pt = d.prev_total_builds || 0;
+    const psr = pt ? (d.prev_successful/pt*100) : null;
+    const pfr = pt ? (d.prev_failed/pt*100) : null;
+    document.getElementById('k-total-delta').innerHTML = deltaHTML(t, pt);
+    document.getElementById('k-success-delta').innerHTML = sr && psr!=null ? deltaHTML(sr, psr) : '';
+    document.getElementById('k-fail-delta').innerHTML = fr && pfr!=null ? deltaHTML(fr, pfr, {invert:true}) : '';
+    document.getElementById('k-dur-delta').innerHTML = deltaHTML(d.avg_duration_ms, d.prev_avg_duration_ms, {invert:true});
+}
+
+async function loadTrends(f) {
+    const data = await fetch(`/api/trends?${qs(f)}`).then(r=>r.json());
+    const labels = data.map(d => { const p=d.period; return p.length===10?p.slice(5):p; });
+    const success = data.map(d=>d.success);
+    const fail = data.map(d=>d.failures);
+    const durs = data.map(d=>Math.round((d.avg_duration_ms||0)/1000));
+
+    if(volChart)volChart.destroy();
+    volChart = new Chart(document.getElementById('chart-volume'),{
+        type:'bar',data:{labels,datasets:[
+            {label:'Success',data:success,backgroundColor:'rgba(63,185,80,0.65)',hoverBackgroundColor:'rgba(63,185,80,0.9)',borderRadius:5,borderSkipped:false},
+            {label:'Failed',data:fail,backgroundColor:'rgba(248,81,73,0.6)',hoverBackgroundColor:'rgba(248,81,73,0.9)',borderRadius:5,borderSkipped:false},
+        ]},options:{...chartOpts,scales:{...chartOpts.scales,x:{...chartOpts.scales.x,stacked:true},y:{...chartOpts.scales.y,stacked:true}}}
+    });
+
+    if(durChart)durChart.destroy();
+    durChart = new Chart(document.getElementById('chart-duration'),{
+        type:'line',data:{labels,datasets:[{
+            label:'Avg (seconds)',data:durs,
+            borderColor:'#58a6ff',backgroundColor:'rgba(88,166,255,0.06)',
+            fill:true,tension:0.4,borderWidth:2.5,
+            pointRadius:4,pointBackgroundColor:'#58a6ff',pointBorderColor:'#0d1117',pointBorderWidth:2,pointHoverRadius:6,
+        }]},options:chartOpts
+    });
+}
+
+async function loadHeatmap(f) {
+    const data = await fetch(`/api/heatmap?${qs(f)}`).then(r=>r.json());
+    const grid = document.getElementById('heatmap');
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const maxCount = Math.max(...data.map(d=>d.count), 1);
+
+    let html = '<div class="heatmap-label"></div>';
+    for(let h=0;h<24;h++) html += `<div class="heatmap-hour">${h%6===0?h:''}</div>`;
+
+    for(let d=0;d<7;d++){
+        html += `<div class="heatmap-label">${days[d]}</div>`;
+        for(let h=0;h<24;h++){
+            const cell = data.find(x=>x.day_of_week===d && x.hour===h);
+            let level = '0';
+            if(cell) {
+                if(cell.failures > cell.count/2) level = 'fail';
+                else {
+                    const pct = cell.count/maxCount;
+                    if(pct>0.75) level='4'; else if(pct>0.5) level='3'; else if(pct>0.25) level='2'; else level='1';
+                }
+            }
+            const title = cell ? `${cell.count} builds, ${cell.failures} failed` : 'No builds';
+            html += `<div class="heatmap-cell" data-level="${level}" title="${days[d]} ${h}:00 — ${title}"></div>`;
+        }
+    }
+    grid.innerHTML = html;
+}
+
+async function loadUsers(f) {
+    const data = await fetch(`/api/users?${qs({days:f.days,folder:f.folder})}`).then(r=>r.json());
+    const el = document.getElementById('users-list');
+    if(!data.length){ el.innerHTML='<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">No user data</div></div>'; return; }
+    el.innerHTML = data.slice(0,6).map(u=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+            <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(88,166,255,0.15);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:var(--blue)">${u.user.slice(0,2).toUpperCase()}</div>
+                <div>
+                    <div style="font-size:0.82rem;font-weight:500;color:var(--text)">${u.user}</div>
+                    <div style="font-size:0.7rem;color:var(--text-faint)">${u.total_builds} builds</div>
+                </div>
+            </div>
+            <span class="badge ${u.failure_rate>30?'badge-red':u.failure_rate>10?'badge-yellow':'badge-green'}">${u.failure_rate.toFixed(0)}% fail</span>
+        </div>
+    `).join('');
+}
+
+async function loadPipelines(f) {
+    const data = await fetch(`/api/pipelines?${qs(f)}`).then(r=>r.json());
+    const tb = document.getElementById('tbl-pipelines');
+    if(!data.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No data yet</div></div></td></tr>';return;}
+    tb.innerHTML = data.map(p=>`<tr>
+        <td class="td-name">${p.job_name}</td>
+        <td><span class="badge badge-dim">${p.job_folder||'root'}</span></td>
+        <td>${p.total_builds}</td>
+        <td class="td-mono">${dur(p.avg_duration_ms)}</td>
+        <td class="td-mono">${dur(p.max_duration_ms)}</td>
+        <td class="td-mono">${dur(p.avg_queue_ms)}</td>
+        <td>${rate(p.failure_rate)}</td>
+    </tr>`).join('');
+}
+
+async function loadAgents(f) {
+    const data = await fetch(`/api/agents?${qs({days:f.days,folder:f.folder,user:f.user})}`).then(r=>r.json());
+    const tb = document.getElementById('tbl-agents');
+    if(!data.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">🖥️</div><div class="empty-text">No data</div></div></td></tr>';return;}
+    tb.innerHTML = data.map(a=>`<tr>
+        <td class="td-name">${a.agent}</td>
+        <td><span class="badge badge-dim">${a.node_labels||'—'}</span></td>
+        <td>${a.total_builds}</td>
+        <td class="td-mono">${dur(a.avg_duration_ms)}</td>
+        <td>${rate(a.failure_rate)}</td>
+        <td class="td-mono">${dur(a.total_busy_ms)}</td>
+    </tr>`).join('');
+}
+
+async function loadStages(f) {
+    const data = await fetch(`/api/stages?${qs({days:f.days,user:f.user})}`).then(r=>r.json());
+    const tb = document.getElementById('tbl-stages');
+    if(!data.length){tb.innerHTML='<tr><td colspan="5"><div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">No data</div></div></td></tr>';return;}
+    tb.innerHTML = data.map(s=>`<tr>
+        <td class="td-name">${s.stage_name}</td>
+        <td>${s.run_count}</td>
+        <td class="td-mono">${dur(s.avg_duration_ms)}</td>
+        <td class="td-mono">${dur(s.max_duration_ms)}</td>
+        <td>${rate(s.failure_rate)}</td>
+    </tr>`).join('');
+}
+
+function switchTab(el) {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('[id^="tab-"]').forEach(t=>t.style.display='none');
+    document.getElementById(`tab-${el.dataset.tab}`).style.display='block';
+    document.getElementById('tbl-search').value = '';
+}
+
+function filterActiveTable() {
+    const q = document.getElementById('tbl-search').value.trim().toLowerCase();
+    const activeTab = document.querySelector('.tab.active').dataset.tab;
+    const rows = document.querySelectorAll(`#tab-${activeTab} tbody tr`);
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = !q || text.includes(q) ? '' : 'none';
+    });
+}
+
+function exportCSV() {
+    window.location = `/api/report.csv?${qs(F())}`;
+}
+
+let lastUpdated = null;
+function tickLastUpdated() {
+    const el = document.getElementById('last-updated');
+    if (!lastUpdated) { el.textContent = ''; return; }
+    const secs = Math.round((Date.now() - lastUpdated) / 1000);
+    el.textContent = secs < 5 ? '· updated just now' : `· updated ${secs}s ago`;
+}
+
+async function triggerSync() {
+    document.getElementById('sync-label').textContent = 'Syncing...';
+    await fetch('/api/collect',{method:'POST'});
+    setTimeout(async()=>{ await refresh(); document.getElementById('sync-label').textContent='Live'; },3000);
+}
+
+const _refresh = refresh;
+refresh = async function() {
+    await _refresh();
+    lastUpdated = Date.now();
+    tickLastUpdated();
+};
+
+loadFilters().then(refresh);
+setInterval(refresh, 60000);
+setInterval(tickLastUpdated, 1000);
+</script>
+</body>
+</html>

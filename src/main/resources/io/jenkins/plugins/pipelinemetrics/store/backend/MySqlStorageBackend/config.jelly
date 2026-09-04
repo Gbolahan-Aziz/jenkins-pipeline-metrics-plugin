@@ -1,0 +1,22 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+  <f:entry title="Host" field="host">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="Port" field="port">
+    <f:number clazz="required" default="3306"/>
+  </f:entry>
+  <f:entry title="Database" field="database">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="Credentials" field="credentialsId">
+    <c:select/>
+  </f:entry>
+  <f:entry title="Use TLS" field="useSsl">
+    <f:checkbox default="true"/>
+  </f:entry>
+  <f:entry title="Max pool size" field="maxPoolSize"
+           description="Maximum pooled connections this controller opens to the database (1-20).">
+    <f:number clazz="required" min="1" max="20" default="5"/>
+  </f:entry>
+</j:jelly>

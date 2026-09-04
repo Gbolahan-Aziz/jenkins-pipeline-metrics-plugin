@@ -1,0 +1,5 @@
+<?jelly escape-by-default='true'?>
+<div>
+  Native, in-process Jenkins build and stage metrics with an analytics dashboard,
+  CSV export, historical backfill, and sidecar data import.
+</div>

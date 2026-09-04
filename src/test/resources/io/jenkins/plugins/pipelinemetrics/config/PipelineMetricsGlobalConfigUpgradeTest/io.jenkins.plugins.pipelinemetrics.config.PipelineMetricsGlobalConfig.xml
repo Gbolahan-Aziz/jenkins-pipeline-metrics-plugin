@@ -1,0 +1,6 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<io.jenkins.plugins.pipelinemetrics.config.PipelineMetricsGlobalConfig>
+  <collectionEnabled>true</collectionEnabled>
+  <retentionDays>60</retentionDays>
+  <backfillLimit>500</backfillLimit>
+</io.jenkins.plugins.pipelinemetrics.config.PipelineMetricsGlobalConfig>
