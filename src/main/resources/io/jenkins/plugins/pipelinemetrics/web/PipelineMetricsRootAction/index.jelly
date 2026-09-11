@@ -6,15 +6,23 @@
       <meta charset="UTF-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
       <title>Pipeline Metrics</title>
-      <link rel="stylesheet" href="${rootURL}/plugin/pipeline-metrics/css/style.css"/>
-      <script src="${rootURL}/plugin/pipeline-metrics/js/chart.umd.min.js"/>
+      <link rel="stylesheet" href="${request.contextPath}/plugin/pipeline-metrics/css/style.css"/>
+      <!-- chartjs-api's PageDecorator only injects Chart.js into pages built on Jenkins' standard
+           <l:layout>/<l:header> chrome; this dashboard is a bespoke full-page HTML view that
+           opts out of that chrome entirely, so it must reference the dependency's bundled script
+           directly instead of relying on the automatic injection. -->
+      <script src="${request.contextPath}/plugin/chartjs-api/chart.umd.js"/>
     </head>
     <body>
+      <!-- Note: this raw HTML page (deliberately not using <l:layout>) has no bound "rootURL"
+           variable — that only exists inside Jenkins' own layout taglib. request.contextPath is
+           the one context-path accessor guaranteed to work in any Stapler-dispatched Jelly view;
+           using ${rootURL} here silently rendered every asset/API URL without the context path
+           (e.g. "/plugin/..." instead of "/jenkins/plugin/..."), 404ing everything whenever
+           Jenkins runs under a non-root context path — which is the hpi:run default. -->
       <div id="pm-config"
-           data-base="${rootURL}/pipeline-metrics/api"
-           data-root="${rootURL}/"
-           data-crumb-field="${h.crumbRequestField}"
-           data-crumb="${h.getCrumb(request)}"
+           data-base="${request.contextPath}/pipeline-metrics/api"
+           data-root="${request.contextPath}/"
            style="display:none"></div>
       <div class="app">
         <div class="header">
@@ -23,7 +31,7 @@
             <h1>Pipeline Metrics</h1>
           </div>
           <div class="header-actions">
-            <a class="btn-sync" href="${rootURL}/">← Jenkins</a>
+            <a class="btn-sync" href="${request.contextPath}/">← Jenkins</a>
             <div class="sync-status">
               <div class="sync-dot"></div>
               <span id="sync-label">Live</span>
@@ -133,7 +141,7 @@
           </div>
         </div>
       </div>
-      <script src="${rootURL}/plugin/pipeline-metrics/js/app.js"/>
+      <script src="${request.contextPath}/plugin/pipeline-metrics/js/app.js"/>
     </body>
   </html>
 </j:jelly>

@@ -43,8 +43,8 @@ public final class BuildFactory {
         if (run instanceof AbstractBuild) {
             builtOn = ((AbstractBuild<?, ?>) run).getBuiltOnStr();
         }
-        if (builtOn == null || builtOn.isEmpty()) {
-            builtOn = "master";
+        if (builtOn == null) {
+            builtOn = "";
         }
         b.setBuiltOn(builtOn);
         b.setNodeLabels(resolveNodeLabels(builtOn));
@@ -59,7 +59,7 @@ public final class BuildFactory {
 
     private static String resolveNodeLabels(String builtOn) {
         try {
-            if ("master".equals(builtOn) || "built-in".equals(builtOn)) {
+            if (builtOn.isEmpty() || "master".equals(builtOn) || "built-in".equals(builtOn)) {
                 return "built-in";
             }
             Jenkins j = Jenkins.get();

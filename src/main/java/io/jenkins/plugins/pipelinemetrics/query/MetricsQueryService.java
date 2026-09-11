@@ -158,7 +158,11 @@ public class MetricsQueryService {
 
     public JSONArray users(FilterSet f) throws SQLException {
         Where w = f.where();
-        String sql = "SELECT CASE WHEN triggered_by='' THEN 'unknown' ELSE triggered_by END user,"
+        // triggered_by is stored as "user:<id>" (see TriggerClassifier); strip that internal
+        // prefix here so the API/dashboard only ever surfaces the bare user id, never the
+        // encoding. The LIKE filter guarantees every matched row is at least "user:", so SUBSTR
+        // never runs off the end of the string.
+        String sql = "SELECT SUBSTR(triggered_by, 6) user,"
                 + " COUNT(*) total_builds,"
                 + " SUM(CASE WHEN result='SUCCESS' THEN 1 ELSE 0 END) success_count,"
                 + " SUM(CASE WHEN result='FAILURE' THEN 1 ELSE 0 END) failure_count,"

@@ -1,13 +1,9 @@
-// Bootstrap: resolve API base + CSRF crumb from the page config element.
+// Bootstrap: resolve the API base/root from the page config element.
 window.PM = window.PM || {};
 (function () {
     var cfg = document.getElementById('pm-config');
     window.PM.base = cfg ? cfg.getAttribute('data-base') : 'api';
     window.PM.root = cfg ? cfg.getAttribute('data-root') : '/';
-    var field = cfg ? cfg.getAttribute('data-crumb-field') : '';
-    var value = cfg ? cfg.getAttribute('data-crumb') : '';
-    window.PM.crumbHeader = {};
-    if (field) { window.PM.crumbHeader[field] = value; }
 })();
 
 // Fetch a fresh CSRF crumb for state-changing POSTs (layout-independent).

@@ -13,7 +13,7 @@
 
   <groupId>io.jenkins.plugins</groupId>
   <artifactId>pipeline-metrics</artifactId>
-  <version>0.1.0</version>
+  <version>${revision}${changelist}</version>
   <packaging>hpi</packaging>
 
   <name>Pipeline Metrics</name>
@@ -42,6 +42,8 @@
   </scm>
 
   <properties>
+    <revision>0.1.0</revision>
+    <changelist>-SNAPSHOT</changelist>
     <jenkins.version>2.462.3</jenkins.version>
     <sqlite.jdbc.version>3.46.1.3</sqlite.jdbc.version>
     <hikaricp.version>5.1.0</hikaricp.version>
@@ -78,6 +80,15 @@
 
   <dependencies>
     <dependency>
+      <!-- Provides Chart.js to every Jenkins page via a PageDecorator, so the dashboard gets it
+           for free instead of this plugin vendoring and hand-maintaining its own copy of a
+           third-party JS library (the update center's convention for shared frontend
+           dependencies, e.g. jquery3-api/bootstrap5-api). -->
+      <groupId>io.jenkins.plugins</groupId>
+      <artifactId>chartjs-api</artifactId>
+      <version>4.2.1.5</version>
+    </dependency>
+    <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-job</artifactId>
     </dependency>
@@ -107,6 +118,14 @@
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <version>${postgresql.jdbc.version}</version>
+      <exclusions>
+        <!-- Compile-time-only nullness annotations; not needed at runtime, so exclude it rather
+             than bundle dead weight into the .hpi. -->
+        <exclusion>
+          <groupId>org.checkerframework</groupId>
+          <artifactId>checker-qual</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <!-- LGPL-2.1; speaks the MySQL wire protocol against both MySQL and MariaDB servers, so

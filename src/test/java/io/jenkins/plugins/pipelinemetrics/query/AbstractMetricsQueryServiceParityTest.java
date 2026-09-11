@@ -152,6 +152,25 @@ public abstract class AbstractMetricsQueryServiceParityTest {
     }
 
     @Test
+    public void usersStripsInternalUserPrefix() throws Exception {
+        // A separate store/dataset: setUp()'s builds carry no trigger cause, so they'd never
+        // match the users() query's "user:%" filter anyway.
+        MetricsStore store = openStore();
+        assertTrue(store.isAvailable());
+        long now = System.currentTimeMillis();
+
+        BuildRecord byAlice = build("demo", 3, "SUCCESS", now - HOURS(1));
+        byAlice.setTriggeredBy("user:alice");
+        store.upsertBuild(byAlice);
+
+        JSONArray users = new MetricsQueryService(store).users(new FilterSet(1, "", "", ""));
+        assertEquals(1, users.size());
+        // The API/dashboard must only ever see the bare user id, never the "user:" encoding
+        // TriggerClassifier stores it with internally.
+        assertEquals("alice", users.getJSONObject(0).getString("user"));
+    }
+
+    @Test
     public void overviewDeltaWindowExcludesOlderPriorPeriod() throws Exception {
         JSONObject overview = query.overview(new FilterSet(1, "", "", ""));
         assertEquals(2, overview.getInt("total_builds"));
