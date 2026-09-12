@@ -1,6 +1,6 @@
 package io.jenkins.plugins.pipelinemetrics.query;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.zaxxer.hikari.HikariDataSource;
 import io.jenkins.plugins.pipelinemetrics.model.BuildRecord;
@@ -9,10 +9,10 @@ import io.jenkins.plugins.pipelinemetrics.store.SqliteConnectionFactory;
 import io.jenkins.plugins.pipelinemetrics.store.dialect.SqliteDialect;
 import java.io.File;
 import net.sf.json.JSONObject;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Regression test for a bug found during review: {@code MetricsApi} holds a single, long-lived
@@ -22,27 +22,25 @@ import org.jvnet.hudson.test.JenkinsRule;
  * {@link MetricsStore#reconfigure}) leaves the dashboard permanently bound to a closed pool
  * until Jenkins restarts.
  */
-public class MetricsQueryServiceLiveBackendSwitchTest {
+@WithJenkins
+class MetricsQueryServiceLiveBackendSwitchTest {
 
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
-
-    @Rule
-    public TemporaryFolder tmp = new TemporaryFolder();
+    @TempDir
+    File tmp;
 
     @Test
-    public void noArgServiceFollowsTheStoreAcrossAReconfigure() throws Exception {
+    void noArgServiceFollowsTheStoreAcrossAReconfigure(JenkinsRule j) throws Exception {
         // Force-create the default singleton first, the same way any other extension would on boot.
         MetricsStore.get();
 
         MetricsQueryService query = new MetricsQueryService();
 
         JSONObject before = query.overview(new FilterSet(30, "", "", ""));
-        assertEquals("no data in the original store yet", 0, before.getInt("total_builds"));
+        assertEquals(0, before.getInt("total_builds"), "no data in the original store yet");
 
         // Simulate an admin switching the storage backend: a fresh pool, swapped into the
         // singleton, with the old one closed underneath it.
-        HikariDataSource newDs = SqliteConnectionFactory.forFile(new File(tmp.getRoot(), "swapped.db"));
+        HikariDataSource newDs = SqliteConnectionFactory.forFile(new File(tmp, "swapped.db"));
         boolean applied = MetricsStore.reconfigure(newDs, new SqliteDialect());
         assertEquals(true, applied);
 
@@ -59,7 +57,7 @@ public class MetricsQueryServiceLiveBackendSwitchTest {
         // Must see the new store's data through the SAME MetricsQueryService instance, and must
         // not throw from trying to use the now-closed old pool.
         JSONObject after = query.overview(new FilterSet(30, "", "", ""));
-        assertEquals("query must follow the reconfigured store, not a stale snapshot",
-                1, after.getInt("total_builds"));
+        assertEquals(1, after.getInt("total_builds"),
+                "query must follow the reconfigured store, not a stale snapshot");
     }
 }

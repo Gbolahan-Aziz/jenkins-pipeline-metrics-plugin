@@ -4,18 +4,20 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.jenkins.plugins.pipelinemetrics.store.MetricsStore;
 import io.jenkins.plugins.pipelinemetrics.store.dialect.PostgresDialect;
-import org.junit.Rule;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Proves {@link PostgresDialect}'s trends/heatmap bucketing expressions are valid, correct SQL
  * against a real server, not just plausible-looking text. Opt-in only
  * ({@code mvn -B verify -Pdb-it}); requires a local Docker daemon.
  */
+@Testcontainers
 public class PostgresMetricsQueryServiceIT extends AbstractMetricsQueryServiceParityTest {
 
-    @Rule
-    public PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container
+    PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Override
     protected MetricsStore openStore() {

@@ -1,13 +1,13 @@
 package io.jenkins.plugins.pipelinemetrics.store;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jenkins.plugins.pipelinemetrics.model.BuildRecord;
 import io.jenkins.plugins.pipelinemetrics.model.StageRecord;
 import java.sql.ResultSet;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Correctness properties every {@link MetricsStore} backend must satisfy, independent of which
@@ -21,10 +21,10 @@ public abstract class AbstractMetricsStoreContractTest {
 
     protected MetricsStore store;
 
-    @Before
+    @BeforeEach
     public void setUpStore() throws Exception {
         store = openStore();
-        assertTrue("store should initialize: " + store.getUnavailableReason(), store.isAvailable());
+        assertTrue(store.isAvailable(), "store should initialize: " + store.getUnavailableReason());
     }
 
     /** A fresh, empty, initialized store — must not share state across test methods. */
@@ -50,8 +50,8 @@ public abstract class AbstractMetricsStoreContractTest {
         store.upsertBuild(b);
         store.upsertBuild(b);
 
-        assertEquals("one build row after repeated upsert", 1, count("SELECT COUNT(*) FROM builds"));
-        assertEquals("stages replaced, not duplicated", 1, count("SELECT COUNT(*) FROM stages"));
+        assertEquals(1, count("SELECT COUNT(*) FROM builds"), "one build row after repeated upsert");
+        assertEquals(1, count("SELECT COUNT(*) FROM stages"), "stages replaced, not duplicated");
     }
 
     @Test

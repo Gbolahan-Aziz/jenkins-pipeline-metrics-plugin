@@ -3,8 +3,9 @@ package io.jenkins.plugins.pipelinemetrics.store;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.jenkins.plugins.pipelinemetrics.store.dialect.PostgresDialect;
-import org.junit.Rule;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Runs the shared store contract against a real PostgreSQL server via Testcontainers. Opt-in
@@ -12,10 +13,11 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * test method keeps each test's row counts isolated, matching the SQLite variant's fresh temp
  * file per test.
  */
+@Testcontainers
 public class PostgresMetricsStoreIT extends AbstractMetricsStoreContractTest {
 
-    @Rule
-    public PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container
+    PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Override
     protected MetricsStore openStore() {

@@ -1,21 +1,19 @@
 package io.jenkins.plugins.pipelinemetrics.monitor;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jenkins.plugins.pipelinemetrics.config.PipelineMetricsGlobalConfig;
 import io.jenkins.plugins.pipelinemetrics.store.backend.PostgresStorageBackend;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class NetworkStorageMonitorTest {
-
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+@WithJenkins
+class NetworkStorageMonitorTest {
 
     @Test
-    public void recognizesKnownNetworkFilesystemTypes() {
+    void recognizesKnownNetworkFilesystemTypes(JenkinsRule j) {
         assertTrue(NetworkStorageMonitor.isNetworkFilesystemType("nfs4"));
         assertTrue(NetworkStorageMonitor.isNetworkFilesystemType("NFS4"));
         assertTrue(NetworkStorageMonitor.isNetworkFilesystemType("cifs"));
@@ -26,18 +24,18 @@ public class NetworkStorageMonitorTest {
     }
 
     @Test
-    public void inactiveOnLocalTempStorageInCi() {
+    void inactiveOnLocalTempStorageInCi(JenkinsRule j) {
         // The test JENKINS_HOME is always local temp storage, so the monitor must not fire here.
         NetworkStorageMonitor monitor = new NetworkStorageMonitor();
         assertFalse(monitor.isActivated());
     }
 
     @Test
-    public void inactiveWhenBackendIsNotSqlite() {
+    void inactiveWhenBackendIsNotSqlite(JenkinsRule j) {
         PostgresStorageBackend backend =
                 new PostgresStorageBackend("pg.internal", 5432, "jenkins_metrics", "db-creds");
         PipelineMetricsGlobalConfig.get().setStorageBackend(backend);
         NetworkStorageMonitor monitor = new NetworkStorageMonitor();
-        assertFalse("only relevant when SQLite is the active backend", monitor.isActivated());
+        assertFalse(monitor.isActivated(), "only relevant when SQLite is the active backend");
     }
 }

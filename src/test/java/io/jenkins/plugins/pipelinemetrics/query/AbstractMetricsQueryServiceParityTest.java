@@ -1,16 +1,16 @@
 package io.jenkins.plugins.pipelinemetrics.query;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import io.jenkins.plugins.pipelinemetrics.model.BuildRecord;
 import io.jenkins.plugins.pipelinemetrics.model.StageRecord;
 import io.jenkins.plugins.pipelinemetrics.store.MetricsStore;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Exercises the analytics queries against every {@code SqlDialect}: trends/heatmap bucketing
@@ -27,10 +27,10 @@ public abstract class AbstractMetricsQueryServiceParityTest {
     /** A fresh, empty, initialized store — must not share state across test methods. */
     protected abstract MetricsStore openStore() throws Exception;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         MetricsStore store = openStore();
-        assertTrue("store should initialize: " + store.getUnavailableReason(), store.isAvailable());
+        assertTrue(store.isAvailable(), "store should initialize: " + store.getUnavailableReason());
 
         long now = System.currentTimeMillis();
         BuildRecord success = build("demo", 1, "SUCCESS", now - HOURS(3));
@@ -75,12 +75,12 @@ public abstract class AbstractMetricsQueryServiceParityTest {
             success += p.optInt("success", 0);
             failures += p.optInt("failures", 0);
         }
-        assertEquals("both builds counted across periods", 2, total);
+        assertEquals(2, total, "both builds counted across periods");
         assertEquals(1, success);
         assertEquals(1, failures);
         // Timestamps are 2h apart, well over the 1h bucket width, so they must land in
         // different "hour" periods (each period spans a single UTC hour).
-        assertEquals("two distinct hour buckets", 2, periods.size());
+        assertEquals(2, periods.size(), "two distinct hour buckets");
     }
 
     @Test
@@ -140,15 +140,15 @@ public abstract class AbstractMetricsQueryServiceParityTest {
         MetricsQueryService isolatedQuery = new MetricsQueryService(store);
 
         JSONArray byFolder = isolatedQuery.stages(null, 1, "team-b", "", "");
-        assertEquals("folder filter should exclude team-a's stage", 1, byFolder.size());
+        assertEquals(1, byFolder.size(), "folder filter should exclude team-a's stage");
         assertEquals("Deploy", byFolder.getJSONObject(0).getString("stage_name"));
 
         JSONArray byAgent = isolatedQuery.stages(null, 1, "", "agent1", "");
-        assertEquals("agent filter should exclude team-b's stage", 1, byAgent.size());
+        assertEquals(1, byAgent.size(), "agent filter should exclude team-b's stage");
         assertEquals("Build", byAgent.getJSONObject(0).getString("stage_name"));
 
         JSONArray unfiltered = isolatedQuery.stages(null, 1, "", "", "");
-        assertEquals("no folder/agent filter returns both stages", 2, unfiltered.size());
+        assertEquals(2, unfiltered.size(), "no folder/agent filter returns both stages");
     }
 
     @Test

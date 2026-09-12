@@ -3,18 +3,20 @@ package io.jenkins.plugins.pipelinemetrics.store;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.jenkins.plugins.pipelinemetrics.store.dialect.MySqlDialect;
-import org.junit.Rule;
 import org.testcontainers.containers.MariaDBContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Runs the shared store contract against a real MariaDB server via Testcontainers, proving the
  * one MySQL/MariaDB dialect and driver work against the MariaDB side of that pairing. Opt-in
  * only ({@code mvn -B verify -Pdb-it}); requires a local Docker daemon.
  */
+@Testcontainers
 public class MariaDbMetricsStoreIT extends AbstractMetricsStoreContractTest {
 
-    @Rule
-    public MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:11");
+    @Container
+    MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:11");
 
     @Override
     protected MetricsStore openStore() {

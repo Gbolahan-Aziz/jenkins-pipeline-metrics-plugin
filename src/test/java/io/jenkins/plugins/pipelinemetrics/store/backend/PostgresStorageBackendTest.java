@@ -1,21 +1,19 @@
 package io.jenkins.plugins.pipelinemetrics.store.backend;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class PostgresStorageBackendTest {
-
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+@WithJenkins
+class PostgresStorageBackendTest {
 
     @Test
-    public void jdbcUrlRequestsTlsByDefault() {
+    void jdbcUrlRequestsTlsByDefault(JenkinsRule j) {
         PostgresStorageBackend backend =
                 new PostgresStorageBackend("pg.internal", 5432, "jenkins_metrics", "db-creds");
         assertEquals("jdbc:postgresql://pg.internal:5432/jenkins_metrics?ssl=true&sslmode=require",
@@ -23,7 +21,7 @@ public class PostgresStorageBackendTest {
     }
 
     @Test
-    public void jdbcUrlDisablesTlsWhenRequested() {
+    void jdbcUrlDisablesTlsWhenRequested(JenkinsRule j) {
         PostgresStorageBackend backend =
                 new PostgresStorageBackend("pg.internal", 5432, "jenkins_metrics", "db-creds");
         backend.setUseSsl(false);
@@ -32,7 +30,7 @@ public class PostgresStorageBackendTest {
     }
 
     @Test
-    public void poolSizeIsValidated() {
+    void poolSizeIsValidated(JenkinsRule j) {
         PostgresStorageBackend backend =
                 new PostgresStorageBackend("pg.internal", 5432, "jenkins_metrics", "db-creds");
         assertThrows(IllegalArgumentException.class, () -> backend.setMaxPoolSize(0));
@@ -40,7 +38,7 @@ public class PostgresStorageBackendTest {
     }
 
     @Test
-    public void missingCredentialsFailClearlyWithoutTouchingNetwork() {
+    void missingCredentialsFailClearlyWithoutTouchingNetwork(JenkinsRule j) {
         PostgresStorageBackend backend =
                 new PostgresStorageBackend("pg.internal", 5432, "jenkins_metrics", "does-not-exist");
         SQLException e = assertThrows(SQLException.class, backend::createDataSource);

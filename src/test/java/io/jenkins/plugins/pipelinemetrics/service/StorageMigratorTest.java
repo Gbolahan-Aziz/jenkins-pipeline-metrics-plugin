@@ -1,7 +1,7 @@
 package io.jenkins.plugins.pipelinemetrics.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jenkins.plugins.pipelinemetrics.model.BuildRecord;
 import io.jenkins.plugins.pipelinemetrics.model.StageRecord;
@@ -9,26 +9,25 @@ import io.jenkins.plugins.pipelinemetrics.store.MetricsStore;
 import java.io.File;
 import java.sql.ResultSet;
 import net.sf.json.JSONObject;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-public class StorageMigratorTest {
+class StorageMigratorTest {
 
-    @Rule
-    public TemporaryFolder tmp = new TemporaryFolder();
+    @TempDir
+    File tmp;
 
     private MetricsStore source;
     private MetricsStore target;
 
-    @Before
-    public void setUp() {
-        source = new MetricsStore(new File(tmp.getRoot(), "source.db"));
+    @BeforeEach
+    void setUp() {
+        source = new MetricsStore(new File(tmp, "source.db"));
         source.init();
         assertTrue(source.isAvailable());
 
-        target = new MetricsStore(new File(tmp.getRoot(), "target.db"));
+        target = new MetricsStore(new File(tmp, "target.db"));
         target.init();
         assertTrue(target.isAvailable());
 
@@ -54,7 +53,7 @@ public class StorageMigratorTest {
     }
 
     @Test
-    public void copiesAllBuildsAndStagesFromSourceToTarget() throws Exception {
+    void copiesAllBuildsAndStagesFromSourceToTarget() throws Exception {
         JSONObject result = StorageMigrator.migrate(source, target);
 
         assertEquals("ok", result.getString("status"));
@@ -73,7 +72,7 @@ public class StorageMigratorTest {
     }
 
     @Test
-    public void reRunningMigrationUpsertsRatherThanDuplicates() throws Exception {
+    void reRunningMigrationUpsertsRatherThanDuplicates() throws Exception {
         StorageMigrator.migrate(source, target);
         JSONObject second = StorageMigrator.migrate(source, target);
 

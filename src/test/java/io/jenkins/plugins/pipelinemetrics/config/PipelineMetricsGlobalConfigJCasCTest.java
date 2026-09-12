@@ -1,37 +1,35 @@
 package io.jenkins.plugins.pipelinemetrics.config;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
+import io.jenkins.plugins.casc.misc.junit.jupiter.WithJenkinsConfiguredWithCode;
 import io.jenkins.plugins.pipelinemetrics.store.backend.MySqlStorageBackend;
 import io.jenkins.plugins.pipelinemetrics.store.backend.PostgresStorageBackend;
 import io.jenkins.plugins.pipelinemetrics.store.backend.SQLiteStorageBackend;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * JCasC round-trip coverage for the {@code storageBackend} selector: default (unset, stays
  * SQLite — the zero-action upgrade guarantee), external PostgreSQL, and external MySQL/MariaDB.
  */
-public class PipelineMetricsGlobalConfigJCasCTest {
-
-    @Rule
-    public JenkinsConfiguredWithCodeRule j = new JenkinsConfiguredWithCodeRule();
+@WithJenkinsConfiguredWithCode
+class PipelineMetricsGlobalConfigJCasCTest {
 
     @Test
     @ConfiguredWithCode("defaultBackend.yml")
-    public void omittingStorageBackendStaysOnLocalSqlite() {
+    void omittingStorageBackendStaysOnLocalSqlite(JenkinsConfiguredWithCodeRule j) {
         PipelineMetricsGlobalConfig config = PipelineMetricsGlobalConfig.get();
         assertEquals(45, config.getRetentionDays());
-        assertTrue("no storageBackend in YAML should leave the SQLite default",
-                config.getStorageBackend() instanceof SQLiteStorageBackend);
+        assertTrue(config.getStorageBackend() instanceof SQLiteStorageBackend,
+                "no storageBackend in YAML should leave the SQLite default");
     }
 
     @Test
     @ConfiguredWithCode("postgres.yml")
-    public void appliesExternalPostgresConfig() {
+    void appliesExternalPostgresConfig(JenkinsConfiguredWithCodeRule j) {
         PipelineMetricsGlobalConfig config = PipelineMetricsGlobalConfig.get();
         assertTrue(config.getStorageBackend() instanceof PostgresStorageBackend);
         PostgresStorageBackend backend = (PostgresStorageBackend) config.getStorageBackend();
@@ -45,7 +43,7 @@ public class PipelineMetricsGlobalConfigJCasCTest {
 
     @Test
     @ConfiguredWithCode("mysql.yml")
-    public void appliesExternalMySqlConfig() {
+    void appliesExternalMySqlConfig(JenkinsConfiguredWithCodeRule j) {
         PipelineMetricsGlobalConfig config = PipelineMetricsGlobalConfig.get();
         assertTrue(config.getStorageBackend() instanceof MySqlStorageBackend);
         MySqlStorageBackend backend = (MySqlStorageBackend) config.getStorageBackend();
@@ -53,7 +51,7 @@ public class PipelineMetricsGlobalConfigJCasCTest {
         assertEquals(3306, backend.getPort());
         assertEquals("jenkins_metrics", backend.getDatabase());
         assertEquals("pipeline-metrics-db", backend.getCredentialsId());
-        assertTrue("useSsl: false in the YAML", !backend.isUseSsl());
+        assertTrue(!backend.isUseSsl(), "useSsl: false in the YAML");
         assertEquals(8, backend.getMaxPoolSize());
     }
 }

@@ -20,8 +20,8 @@ import java.time.format.DateTimeFormatter;
 import jenkins.model.Jenkins;
 import net.sf.json.JSON;
 import net.sf.json.JSONObject;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.WebMethod;
 import org.kohsuke.stapler.verb.GET;
 import org.kohsuke.stapler.verb.POST;
@@ -32,13 +32,13 @@ public class MetricsApi {
     private final MetricsQueryService query = new MetricsQueryService();
 
     @GET
-    public void doFilters(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doFilters(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         checkView();
         run(rsp, () -> query.filters());
     }
 
     @GET
-    public void doOverview(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doOverview(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         checkView();
         FilterSet f = parse(req, rsp);
         if (f == null) {
@@ -48,7 +48,7 @@ public class MetricsApi {
     }
 
     @GET
-    public void doTrends(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doTrends(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         checkView();
         FilterSet f = parse(req, rsp);
         if (f == null) {
@@ -65,7 +65,7 @@ public class MetricsApi {
     }
 
     @GET
-    public void doPipelines(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doPipelines(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         checkView();
         FilterSet f = parse(req, rsp);
         if (f == null) {
@@ -81,7 +81,7 @@ public class MetricsApi {
     }
 
     @GET
-    public void doAgents(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doAgents(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         checkView();
         FilterSet f = parse(req, rsp);
         if (f == null) {
@@ -91,7 +91,7 @@ public class MetricsApi {
     }
 
     @GET
-    public void doStages(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doStages(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         checkView();
         int days = intParam(req, "days", 30);
         if (!isValidDays(days)) {
@@ -103,7 +103,7 @@ public class MetricsApi {
     }
 
     @GET
-    public void doHeatmap(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doHeatmap(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         checkView();
         FilterSet f = parse(req, rsp);
         if (f == null) {
@@ -113,7 +113,7 @@ public class MetricsApi {
     }
 
     @GET
-    public void doUsers(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doUsers(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         checkView();
         FilterSet f = parse(req, rsp);
         if (f == null) {
@@ -124,7 +124,7 @@ public class MetricsApi {
 
     @WebMethod(name = "report.csv")
     @GET
-    public void doReportCsv(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doReportCsv(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         checkView();
         FilterSet f = parse(req, rsp);
         if (f == null) {
@@ -144,13 +144,13 @@ public class MetricsApi {
     }
 
     @POST
-    public void doCollect(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doCollect(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         Jenkins.get().checkPermission(PipelineMetricsPermissions.CONFIGURE);
         writeJson(rsp, MetricsService.get().runManualCollection());
     }
 
     @POST
-    public void doBackfill(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doBackfill(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         Jenkins.get().checkPermission(PipelineMetricsPermissions.CONFIGURE);
         PipelineMetricsGlobalConfig config = PipelineMetricsGlobalConfig.get();
         if (config == null) {
@@ -164,13 +164,13 @@ public class MetricsApi {
     }
 
     @GET
-    public void doBackfillStatus(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doBackfillStatus(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         checkView();
         writeJson(rsp, BackfillService.get().status());
     }
 
     @POST
-    public void doImport(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doImport(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         Jenkins.get().checkPermission(PipelineMetricsPermissions.CONFIGURE);
         String path = param(req, "path", "");
         if (path.isEmpty()) {
@@ -190,7 +190,7 @@ public class MetricsApi {
      * arbitrary source backend description.
      */
     @POST
-    public void doMigrateStorage(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    public void doMigrateStorage(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         Jenkins.get().checkPermission(PipelineMetricsPermissions.CONFIGURE);
         SQLiteStorageBackend sqliteBackend = new SQLiteStorageBackend();
         try {
@@ -221,7 +221,7 @@ public class MetricsApi {
         JSON get() throws SQLException;
     }
 
-    private static void run(StaplerResponse rsp, JsonSupplier supplier) throws IOException {
+    private static void run(StaplerResponse2 rsp, JsonSupplier supplier) throws IOException {
         try {
             writeJson(rsp, supplier.get());
         } catch (SQLException e) {
@@ -233,7 +233,7 @@ public class MetricsApi {
         Jenkins.get().checkPermission(PipelineMetricsPermissions.VIEW);
     }
 
-    private static FilterSet parse(StaplerRequest req, StaplerResponse rsp) throws IOException {
+    private static FilterSet parse(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
         int days = intParam(req, "days", 30);
         if (!isValidDays(days)) {
             writeError(rsp, 400, "days must be between 1 and 365");
@@ -246,12 +246,12 @@ public class MetricsApi {
         return days >= 1 && days <= 365;
     }
 
-    private static String param(StaplerRequest req, String name, String def) {
+    private static String param(StaplerRequest2 req, String name, String def) {
         String v = req.getParameter(name);
         return v == null ? def : v;
     }
 
-    private static int intParam(StaplerRequest req, String name, int def) {
+    private static int intParam(StaplerRequest2 req, String name, int def) {
         String v = req.getParameter(name);
         if (v == null || v.isEmpty()) {
             return def;
@@ -263,12 +263,12 @@ public class MetricsApi {
         }
     }
 
-    private static void writeJson(StaplerResponse rsp, JSON json) throws IOException {
+    private static void writeJson(StaplerResponse2 rsp, JSON json) throws IOException {
         rsp.setContentType("application/json;charset=UTF-8");
         rsp.getWriter().write(json.toString());
     }
 
-    private static void writeError(StaplerResponse rsp, int code, String message) throws IOException {
+    private static void writeError(StaplerResponse2 rsp, int code, String message) throws IOException {
         rsp.setStatus(code);
         JSONObject o = new JSONObject();
         o.put("error", message == null ? "error" : message);

@@ -3,10 +3,10 @@
  * https://github.com/jenkins-infra/pipeline-library/
  */
 buildPlugin(
-    forkCount: '2',
+    forkCount: '1C',
     useContainerAgent: true,
     configurations: [
-        [platform: 'linux', jdk: 17],
+        [platform: 'linux', jdk: 25],
         [platform: 'windows', jdk: 21],
     ]
 )

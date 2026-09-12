@@ -4,18 +4,20 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.jenkins.plugins.pipelinemetrics.store.MetricsStore;
 import io.jenkins.plugins.pipelinemetrics.store.dialect.MySqlDialect;
-import org.junit.Rule;
 import org.testcontainers.containers.MariaDBContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Proves {@link MySqlDialect}'s trends/heatmap bucketing expressions are valid, correct SQL
  * against a real server, not just plausible-looking text. Opt-in only
  * ({@code mvn -B verify -Pdb-it}); requires a local Docker daemon.
  */
+@Testcontainers
 public class MariaDbMetricsQueryServiceIT extends AbstractMetricsQueryServiceParityTest {
 
-    @Rule
-    public MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:11");
+    @Container
+    MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:11");
 
     @Override
     protected MetricsStore openStore() {

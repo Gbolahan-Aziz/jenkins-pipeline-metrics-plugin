@@ -7,18 +7,18 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.88</version>
+    <version>6.2221.va_045130417c9</version>
     <relativePath/>
   </parent>
 
   <groupId>io.jenkins.plugins</groupId>
   <artifactId>pipeline-metrics</artifactId>
-  <version>${revision}${changelist}</version>
+  <version>${changelist}</version>
   <packaging>hpi</packaging>
 
   <name>Pipeline Metrics</name>
   <description>Native, in-process Jenkins build and stage metrics with an analytics dashboard.</description>
-  <url>https://github.com/Gbolahan-Aziz/jenkins-pipeline-metrics-plugin</url>
+  <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
 
   <licenses>
     <license>
@@ -27,30 +27,34 @@
     </license>
   </licenses>
 
-  <developers>
-    <developer>
-      <id>Gbolahan-Aziz</id>
-      <name>Azeez Razaq</name>
-    </developer>
-  </developers>
-
-  <scm>
-    <connection>scm:git:https://github.com/Gbolahan-Aziz/jenkins-pipeline-metrics-plugin.git</connection>
-    <developerConnection>scm:git:https://github.com/Gbolahan-Aziz/jenkins-pipeline-metrics-plugin.git</developerConnection>
-    <url>https://github.com/Gbolahan-Aziz/jenkins-pipeline-metrics-plugin</url>
-    <tag>HEAD</tag>
+  <scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false"
+       child.scm.url.inherit.append.path="false">
+    <connection>scm:git:https://github.com/${gitHubRepo}.git</connection>
+    <developerConnection>scm:git:https://github.com/${gitHubRepo}.git</developerConnection>
+    <tag>${scmTag}</tag>
+    <url>https://github.com/${gitHubRepo}</url>
   </scm>
 
   <properties>
-    <revision>0.1.0</revision>
-    <changelist>-SNAPSHOT</changelist>
-    <jenkins.version>2.462.3</jenkins.version>
+    <changelist>999999-SNAPSHOT</changelist>
+    <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
+    <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
+    <jenkins.baseline>2.555</jenkins.baseline>
+    <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+    <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
+    <!-- The DB drivers/pool below aren't provided by Jenkins core, so they must be bundled;
+         slf4j-api is HikariCP's own transitive dependency. Pinning this list means any future,
+         unintended library creep fails the build instead of silently bloating the .hpi. -->
+    <hpi.bundledArtifacts>HikariCP,mariadb-java-client,postgresql,slf4j-api,sqlite-jdbc</hpi.bundledArtifacts>
+    <banObsoleteDependencyOverrides.skip>false</banObsoleteDependencyOverrides.skip>
+    <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
+    <ban-deprecated-stapler.skip>false</ban-deprecated-stapler.skip>
+    <ban-commons-lang-2.skip>false</ban-commons-lang-2.skip>
     <sqlite.jdbc.version>3.46.1.3</sqlite.jdbc.version>
     <hikaricp.version>5.1.0</hikaricp.version>
     <postgresql.jdbc.version>42.7.4</postgresql.jdbc.version>
     <mariadb.jdbc.version>3.4.1</mariadb.jdbc.version>
     <testcontainers.version>1.21.4</testcontainers.version>
-    <maven.compiler.release>17</maven.compiler.release>
   </properties>
 
   <repositories>
@@ -70,8 +74,8 @@
     <dependencies>
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
-        <artifactId>bom-2.462.x</artifactId>
-        <version>4228.v0a_71308d905b_</version>
+        <artifactId>bom-${jenkins.baseline}.x</artifactId>
+        <version>7002.v028a_3607ddc8</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -196,6 +200,12 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>mariadb</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
       <version>${testcontainers.version}</version>
       <scope>test</scope>
     </dependency>

@@ -1,7 +1,8 @@
 package io.jenkins.plugins.pipelinemetrics.credentials;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
@@ -9,17 +10,15 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.util.Secret;
 import java.sql.SQLException;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class CredentialsResolverTest {
-
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+@WithJenkins
+class CredentialsResolverTest {
 
     @Test
-    public void resolvesARegisteredCredential() throws Exception {
+    void resolvesARegisteredCredential(JenkinsRule j) throws Exception {
         UsernamePasswordCredentialsImpl cred = new UsernamePasswordCredentialsImpl(
                 CredentialsScope.SYSTEM, "pipeline-metrics-db", "test db creds", "dbuser", "s3cret");
         SystemCredentialsProvider.getInstance().getCredentials().add(cred);
@@ -32,8 +31,8 @@ public class CredentialsResolverTest {
     }
 
     @Test
-    public void missingCredentialsIdFailsClearly() {
+    void missingCredentialsIdFailsClearly(JenkinsRule j) {
         SQLException e = assertThrows(SQLException.class, () -> CredentialsResolver.lookup("does-not-exist"));
-        org.junit.Assert.assertTrue(e.getMessage().contains("does-not-exist"));
+        assertTrue(e.getMessage().contains("does-not-exist"));
     }
 }

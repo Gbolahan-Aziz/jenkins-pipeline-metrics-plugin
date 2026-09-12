@@ -4,6 +4,9 @@ target/
 *.jpi
 *.class
 
+# mvn hpi:run
+work/
+
 # IDE
 .idea/
 *.iml
