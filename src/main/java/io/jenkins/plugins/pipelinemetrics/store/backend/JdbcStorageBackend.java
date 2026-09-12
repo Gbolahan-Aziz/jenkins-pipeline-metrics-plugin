@@ -133,7 +133,12 @@ public abstract class JdbcStorageBackend extends StorageBackend {
      */
     public abstract static class JdbcBackendDescriptor extends Descriptor<StorageBackend> {
 
+        // No side effects (pure input validation/listbox population, no state change, no external
+        // calls beyond the already-loaded in-memory credentials list), so GET without @POST is
+        // the standard, safe Jenkins form-validation pattern here.
+        // lgtm[jenkins/csrf]
         public FormValidation doCheckMaxPoolSize(@QueryParameter String value) {
+            Jenkins.get().checkPermission(PipelineMetricsPermissions.CONFIGURE);
             try {
                 int n = Integer.parseInt(value.trim());
                 if (n < MIN_POOL_SIZE || n > MAX_POOL_SIZE) {
@@ -145,6 +150,7 @@ public abstract class JdbcStorageBackend extends StorageBackend {
             }
         }
 
+        // lgtm[jenkins/csrf]
         public FormValidation doCheckCredentialsId(@QueryParameter String value) {
             Jenkins.get().checkPermission(PipelineMetricsPermissions.CONFIGURE);
             if (value == null || value.isEmpty()) {
@@ -153,6 +159,7 @@ public abstract class JdbcStorageBackend extends StorageBackend {
             return FormValidation.ok();
         }
 
+        // lgtm[jenkins/csrf]
         public ListBoxModel doFillCredentialsIdItems(@QueryParameter String credentialsId) {
             Jenkins jenkins = Jenkins.get();
             StandardListBoxModel result = new StandardListBoxModel();
