@@ -333,5 +333,27 @@ refresh = async function() {
     tickLastUpdated();
 };
 
+// Event wiring lives here instead of inline on{click,change,input} attributes so the page stays
+// CSP-compliant (Jenkins' Content-Security-Policy blocks inline event handler attributes).
+document.getElementById('btn-export').addEventListener('click', exportCSV);
+document.getElementById('btn-sync').addEventListener('click', triggerSync);
+const btnBackfill = document.getElementById('btn-backfill');
+if (btnBackfill) { btnBackfill.addEventListener('click', triggerBackfill); }
+const btnImport = document.getElementById('btn-import');
+if (btnImport) { btnImport.addEventListener('click', triggerImport); }
+const btnMigrate = document.getElementById('btn-migrate');
+if (btnMigrate) { btnMigrate.addEventListener('click', triggerStorageMigration); }
+
+['f-folder', 'f-agent', 'f-user', 'f-days', 'f-group'].forEach(id => {
+    document.getElementById(id).addEventListener('change', refresh);
+});
+
+document.querySelector('.tabs').addEventListener('click', e => {
+    const tab = e.target.closest('.tab');
+    if (tab) { switchTab(tab); }
+});
+
+document.getElementById('tbl-search').addEventListener('input', filterActiveTable);
+
 loadFilters().then(refresh);
 setInterval(refresh, 60000);

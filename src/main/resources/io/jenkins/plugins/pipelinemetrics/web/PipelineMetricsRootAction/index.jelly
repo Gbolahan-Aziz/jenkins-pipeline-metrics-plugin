@@ -37,29 +37,29 @@
               <span id="sync-label">Live</span>
               <span id="last-updated" class="last-updated"></span>
             </div>
-            <button class="btn-sync" onclick="exportCSV()">⬇ Export CSV</button>
-            <button class="btn-sync" onclick="triggerSync()">↻ Sync Now</button>
+            <button class="btn-sync" id="btn-export">⬇ Export CSV</button>
+            <button class="btn-sync" id="btn-sync">↻ Sync Now</button>
             <j:if test="${it.canConfigure}">
-              <button class="btn-sync" onclick="triggerBackfill()" id="btn-backfill">⤓ Backfill</button>
-              <button class="btn-sync" onclick="triggerImport()">⇪ Import…</button>
-              <button class="btn-sync" onclick="triggerStorageMigration()">⇄ Migrate storage…</button>
+              <button class="btn-sync" id="btn-backfill">⤓ Backfill</button>
+              <button class="btn-sync" id="btn-import">⇪ Import…</button>
+              <button class="btn-sync" id="btn-migrate">⇄ Migrate storage…</button>
             </j:if>
           </div>
         </div>
 
         <div class="filters">
           <div class="filter-pill">
-            <select id="f-folder" onchange="refresh()"><option value="">All Environments</option></select>
+            <select id="f-folder"><option value="">All Environments</option></select>
           </div>
           <div class="filter-pill">
-            <select id="f-agent" onchange="refresh()"><option value="">All Agents</option></select>
+            <select id="f-agent"><option value="">All Agents</option></select>
           </div>
           <div class="filter-pill">
-            <select id="f-user" onchange="refresh()"><option value="">All Users</option></select>
+            <select id="f-user"><option value="">All Users</option></select>
           </div>
           <div class="filter-sep"></div>
           <div class="filter-pill">
-            <select id="f-days" onchange="refresh()">
+            <select id="f-days">
               <option value="7">7 days</option>
               <option value="30" selected="selected">30 days</option>
               <option value="90">90 days</option>
@@ -68,7 +68,7 @@
             </select>
           </div>
           <div class="filter-pill">
-            <select id="f-group" onchange="refresh()">
+            <select id="f-group">
               <option value="day">Daily</option>
               <option value="week">Weekly</option>
               <option value="hour">Hourly</option>
@@ -109,11 +109,11 @@
 
         <div class="tabs-row">
           <div class="tabs">
-            <div class="tab active" data-tab="pipelines" onclick="switchTab(this)">Pipelines</div>
-            <div class="tab" data-tab="agents" onclick="switchTab(this)">Agents</div>
-            <div class="tab" data-tab="stages" onclick="switchTab(this)">Stages</div>
+            <div class="tab active" data-tab="pipelines">Pipelines</div>
+            <div class="tab" data-tab="agents">Agents</div>
+            <div class="tab" data-tab="stages">Stages</div>
           </div>
-          <input id="tbl-search" class="tbl-search" type="text" placeholder="Filter rows…" oninput="filterActiveTable()"/>
+          <input id="tbl-search" class="tbl-search" type="text" placeholder="Filter rows…"/>
         </div>
 
         <div id="tab-pipelines">
