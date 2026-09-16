@@ -30,6 +30,11 @@ public class MySqlStorageBackend extends JdbcStorageBackend {
     }
 
     @Override
+    protected String driverClassName() {
+        return "org.mariadb.jdbc.Driver";
+    }
+
+    @Override
     @NonNull
     public SqlDialect dialect() {
         return new MySqlDialect();

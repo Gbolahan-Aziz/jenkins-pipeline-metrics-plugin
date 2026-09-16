@@ -9,6 +9,7 @@ import io.jenkins.plugins.pipelinemetrics.store.MetricsStore;
 import java.io.File;
 import java.sql.ResultSet;
 import net.sf.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -38,6 +39,23 @@ class StorageMigratorTest {
 
         BuildRecord b2 = build("demo", 2, "FAILURE", 2_000L);
         source.upsertBuild(b2);
+    }
+
+    /**
+     * Releases both pools between tests. Without this each pool keeps its backing file open,
+     * which leaks a pool per test method and — on Windows, where an open file cannot be deleted
+     * — makes JUnit's {@code @TempDir} cleanup fail the test after it has already passed.
+     */
+    @AfterEach
+    void tearDown() {
+        if (source != null) {
+            source.close();
+            source = null;
+        }
+        if (target != null) {
+            target.close();
+            target = null;
+        }
     }
 
     private static BuildRecord build(String job, int number, String result, long ts) {

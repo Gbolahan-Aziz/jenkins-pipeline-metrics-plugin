@@ -1,4 +1,12 @@
 // Bootstrap: resolve the API base/root from the page config element.
+//
+// Everything below runs inside an IIFE. Rendered through Jenkins' <l:layout>, this script shares
+// the global scope with Jenkins core's own bundles, and core already defines a global `qs`. A
+// top-level `const qs` collided with it and threw "Identifier 'qs' has already been declared",
+// which aborted this entire file and left every tile showing its "—" placeholder. Keeping the
+// declarations function-scoped fixes that and makes the page immune to any other name core may
+// introduce later. window.PM stays global deliberately: it is this plugin's one namespaced export.
+(function () {
 window.PM = window.PM || {};
 (function () {
     var cfg = document.getElementById('pm-config');
@@ -357,3 +365,4 @@ document.getElementById('tbl-search').addEventListener('input', filterActiveTabl
 
 loadFilters().then(refresh);
 setInterval(refresh, 60000);
+})();

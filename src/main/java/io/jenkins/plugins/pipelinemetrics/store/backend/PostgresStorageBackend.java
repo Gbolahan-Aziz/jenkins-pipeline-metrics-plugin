@@ -30,6 +30,11 @@ public class PostgresStorageBackend extends JdbcStorageBackend {
     }
 
     @Override
+    protected String driverClassName() {
+        return "org.postgresql.Driver";
+    }
+
+    @Override
     @NonNull
     public SqlDialect dialect() {
         return new PostgresDialect();

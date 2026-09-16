@@ -1,65 +1,70 @@
 <?jelly escape-by-default='false'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
-  <st:contentType value="text/html;charset=UTF-8"/>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8"/>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-      <title>Pipeline Metrics</title>
-      <link rel="stylesheet" href="${request.contextPath}/plugin/pipeline-metrics/css/style.css"/>
-      <!-- chartjs-api's PageDecorator only injects Chart.js into pages built on Jenkins' standard
-           <l:layout>/<l:header> chrome; this dashboard is a bespoke full-page HTML view that
-           opts out of that chrome entirely, so it must reference the dependency's bundled script
-           directly instead of relying on the automatic injection. -->
-      <script src="${request.contextPath}/plugin/chartjs-api/chart.umd.js"/>
-    </head>
-    <body>
-      <!-- Note: this raw HTML page (deliberately not using <l:layout>) has no bound "rootURL"
-           variable — that only exists inside Jenkins' own layout taglib. request.contextPath is
-           the one context-path accessor guaranteed to work in any Stapler-dispatched Jelly view;
-           using ${rootURL} here silently rendered every asset/API URL without the context path
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout">
+  <!--
+    Rendered through Jenkins' own <l:layout> rather than as a standalone HTML document, so the
+    dashboard inherits the controller's stylesheets, design tokens and light/dark theme and reads
+    as part of Jenkins instead of a separate application.
+
+    type="full-screen" gives the analytics grid the full viewport width. Note that this layout
+    deliberately omits Jenkins' page header and footer (see lib/layout/layout.jelly, which skips
+    <l:pageHeader> when layoutType is full-screen), which is why the explicit "Jenkins" link in
+    the header below is kept — it is the only way back out of this page.
+
+    PageDecorators still run inside <head> for every layout type, so chartjs-api injects Chart.js
+    automatically here; this view no longer references chart.umd.js itself.
+  -->
+  <l:layout title="${%Pipeline Metrics}" type="full-screen">
+    <l:header>
+      <link rel="stylesheet" type="text/css"
+            href="${request.contextPath}/plugin/pipeline-metrics/css/style.css"/>
+    </l:header>
+
+    <l:main-panel>
+      <!-- Note: request.contextPath, not ${rootURL}. It is the one context-path accessor
+           guaranteed to work in any Stapler-dispatched Jelly view; an earlier revision used
+           ${rootURL} and silently rendered every asset/API URL without the context path
            (e.g. "/plugin/..." instead of "/jenkins/plugin/..."), 404ing everything whenever
            Jenkins runs under a non-root context path — which is the hpi:run default. -->
       <div id="pm-config"
            data-base="${request.contextPath}/pipeline-metrics/api"
            data-root="${request.contextPath}/"
            style="display:none"></div>
-      <div class="app">
+      <div class="pm-app">
         <div class="header">
           <div class="brand">
             <div class="brand-icon">⚡</div>
             <h1>Pipeline Metrics</h1>
           </div>
           <div class="header-actions">
-            <a class="btn-sync" href="${request.contextPath}/">← Jenkins</a>
+            <a class="jenkins-button" href="${request.contextPath}/">Jenkins</a>
             <div class="sync-status">
               <div class="sync-dot"></div>
               <span id="sync-label">Live</span>
               <span id="last-updated" class="last-updated"></span>
             </div>
-            <button class="btn-sync" id="btn-export">⬇ Export CSV</button>
-            <button class="btn-sync" id="btn-sync">↻ Sync Now</button>
+            <button class="jenkins-button" id="btn-export">Export CSV</button>
+            <button class="jenkins-button" id="btn-sync">Sync Now</button>
             <j:if test="${it.canConfigure}">
-              <button class="btn-sync" id="btn-backfill">⤓ Backfill</button>
-              <button class="btn-sync" id="btn-import">⇪ Import…</button>
-              <button class="btn-sync" id="btn-migrate">⇄ Migrate storage…</button>
+              <button class="jenkins-button" id="btn-backfill">Backfill</button>
+              <button class="jenkins-button" id="btn-import">Import…</button>
+              <button class="jenkins-button" id="btn-migrate">Migrate storage…</button>
             </j:if>
           </div>
         </div>
 
         <div class="filters">
-          <div class="filter-pill">
-            <select id="f-folder"><option value="">All Environments</option></select>
+          <div class="jenkins-select">
+            <select id="f-folder" class="jenkins-select__input"><option value="">All Environments</option></select>
           </div>
-          <div class="filter-pill">
-            <select id="f-agent"><option value="">All Agents</option></select>
+          <div class="jenkins-select">
+            <select id="f-agent" class="jenkins-select__input"><option value="">All Agents</option></select>
           </div>
-          <div class="filter-pill">
-            <select id="f-user"><option value="">All Users</option></select>
+          <div class="jenkins-select">
+            <select id="f-user" class="jenkins-select__input"><option value="">All Users</option></select>
           </div>
           <div class="filter-sep"></div>
-          <div class="filter-pill">
-            <select id="f-days">
+          <div class="jenkins-select">
+            <select id="f-days" class="jenkins-select__input">
               <option value="7">7 days</option>
               <option value="30" selected="selected">30 days</option>
               <option value="90">90 days</option>
@@ -67,8 +72,8 @@
               <option value="365">1 year</option>
             </select>
           </div>
-          <div class="filter-pill">
-            <select id="f-group">
+          <div class="jenkins-select">
+            <select id="f-group" class="jenkins-select__input">
               <option value="day">Daily</option>
               <option value="week">Weekly</option>
               <option value="hour">Hourly</option>
@@ -113,7 +118,7 @@
             <div class="tab" data-tab="agents">Agents</div>
             <div class="tab" data-tab="stages">Stages</div>
           </div>
-          <input id="tbl-search" class="tbl-search" type="text" placeholder="Filter rows…"/>
+          <input id="tbl-search" class="jenkins-input tbl-search" type="text" placeholder="Filter rows…"/>
         </div>
 
         <div id="tab-pipelines">
@@ -142,6 +147,6 @@
         </div>
       </div>
       <script src="${request.contextPath}/plugin/pipeline-metrics/js/app.js"/>
-    </body>
-  </html>
+    </l:main-panel>
+  </l:layout>
 </j:jelly>
