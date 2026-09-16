@@ -7,8 +7,11 @@ import static org.junit.jupiter.api.Assertions.fail;
 import io.jenkins.plugins.pipelinemetrics.model.BuildRecord;
 import io.jenkins.plugins.pipelinemetrics.model.StageRecord;
 import io.jenkins.plugins.pipelinemetrics.store.MetricsStore;
+import java.util.ArrayList;
+import java.util.List;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,9 +30,34 @@ public abstract class AbstractMetricsQueryServiceParityTest {
     /** A fresh, empty, initialized store — must not share state across test methods. */
     protected abstract MetricsStore openStore() throws Exception;
 
+    private final List<MetricsStore> openedStores = new ArrayList<>();
+
+    /**
+     * {@link #openStore()}, but registered for release in {@link #closeStores()}. Several tests
+     * here open an extra store beyond the shared one, so every call site must go through this.
+     */
+    private MetricsStore trackStore() throws Exception {
+        MetricsStore store = openStore();
+        openedStores.add(store);
+        return store;
+    }
+
+    /**
+     * Releases every pool opened during the test. Without this each pool keeps its backing file
+     * open, which leaks a pool per test method and — on Windows, where an open file cannot be
+     * deleted — makes JUnit's {@code @TempDir} cleanup fail the test after it has already passed.
+     */
+    @AfterEach
+    public void closeStores() {
+        for (MetricsStore store : openedStores) {
+            store.close();
+        }
+        openedStores.clear();
+    }
+
     @BeforeEach
     public void setUp() throws Exception {
-        MetricsStore store = openStore();
+        MetricsStore store = trackStore();
         assertTrue(store.isAvailable(), "store should initialize: " + store.getUnavailableReason());
 
         long now = System.currentTimeMillis();
@@ -121,7 +149,7 @@ public abstract class AbstractMetricsQueryServiceParityTest {
     public void stagesHonorsFolderAndAgentFilters() throws Exception {
         // A separate store/dataset so this doesn't perturb the shared setUp() data other tests
         // in this class depend on for their exact counts.
-        MetricsStore store = openStore();
+        MetricsStore store = trackStore();
         assertTrue(store.isAvailable());
         long now = System.currentTimeMillis();
 
@@ -155,7 +183,7 @@ public abstract class AbstractMetricsQueryServiceParityTest {
     public void usersStripsInternalUserPrefix() throws Exception {
         // A separate store/dataset: setUp()'s builds carry no trigger cause, so they'd never
         // match the users() query's "user:%" filter anyway.
-        MetricsStore store = openStore();
+        MetricsStore store = trackStore();
         assertTrue(store.isAvailable());
         long now = System.currentTimeMillis();
 

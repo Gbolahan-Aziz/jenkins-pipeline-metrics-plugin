@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.jenkins.plugins.pipelinemetrics.model.BuildRecord;
 import io.jenkins.plugins.pipelinemetrics.model.StageRecord;
 import java.sql.ResultSet;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +26,19 @@ public abstract class AbstractMetricsStoreContractTest {
     public void setUpStore() throws Exception {
         store = openStore();
         assertTrue(store.isAvailable(), "store should initialize: " + store.getUnavailableReason());
+    }
+
+    /**
+     * Releases the connection pool between tests. Without this the pool keeps the backing file
+     * open, which leaks a pool per test method and — on Windows, where an open file cannot be
+     * deleted — makes JUnit's {@code @TempDir} cleanup fail the test after it has already passed.
+     */
+    @AfterEach
+    public void closeStore() {
+        if (store != null) {
+            store.close();
+            store = null;
+        }
     }
 
     /** A fresh, empty, initialized store — must not share state across test methods. */

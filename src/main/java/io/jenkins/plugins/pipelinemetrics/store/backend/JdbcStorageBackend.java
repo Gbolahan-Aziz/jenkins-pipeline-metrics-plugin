@@ -100,12 +100,27 @@ public abstract class JdbcStorageBackend extends StorageBackend {
     /** Pool name for logs/metrics, e.g. {@code "pipeline-metrics-postgresql"}. */
     protected abstract String poolName();
 
+    /**
+     * The JDBC driver class, e.g. {@code "org.postgresql.Driver"}.
+     *
+     * <p>This must be set explicitly rather than left to HikariCP's URL-based lookup. The drivers
+     * ship in separate API plugins (postgresql-api, mariadb-api), so each one registers itself
+     * with {@link java.sql.DriverManager} under <em>that</em> plugin's class loader. {@code
+     * DriverManager} only hands back drivers visible to the calling class's loader, and the caller
+     * here is HikariCP loaded from this plugin — so a URL-only lookup fails at runtime with "No
+     * suitable driver found", even though everything compiles and the unit tests (which exercise
+     * SQLite via a direct DataSource) stay green. Naming the class makes Hikari instantiate the
+     * driver itself through this plugin's loader, which can see its plugin dependencies.
+     */
+    protected abstract String driverClassName();
+
     @Override
     @NonNull
     public HikariDataSource createDataSource() throws SQLException {
         StandardUsernamePasswordCredentials creds = CredentialsResolver.lookup(credentialsId);
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl());
+        config.setDriverClassName(driverClassName());
         config.setUsername(creds.getUsername());
         config.setPassword(Secret.toString(creds.getPassword()));
         config.setMaximumPoolSize(maxPoolSize);
