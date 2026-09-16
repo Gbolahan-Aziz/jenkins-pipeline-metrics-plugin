@@ -113,7 +113,6 @@
            Database abstraction, only the driver classes this one ships. -->
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>database-sqlite</artifactId>
-      <version>1.10</version>
     </dependency>
     <dependency>
       <groupId>com.zaxxer</groupId>
@@ -124,7 +123,6 @@
       <!-- PostgreSQL JDBC driver, supplied by the update centre's API plugin. -->
       <groupId>io.jenkins.plugins</groupId>
       <artifactId>postgresql-api</artifactId>
-      <version>42.7.11-94.v50c5c1c8f3b_d</version>
     </dependency>
     <dependency>
       <!-- MariaDB Connector/J, supplied by the update centre's API plugin. It speaks the MySQL
@@ -132,7 +130,6 @@
            "MySQL/MariaDB" without the GPL mysql-connector-j. -->
       <groupId>io.jenkins.plugins</groupId>
       <artifactId>mariadb-api</artifactId>
-      <version>3.5.10-202.v20418813713a_</version>
     </dependency>
 
     <dependency>
