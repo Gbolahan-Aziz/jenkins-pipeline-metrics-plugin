@@ -19,10 +19,9 @@
     --pm-blue: var(--accent-color, #58a6ff);
     --pm-border: var(--card-border-color, #e6e6e6);
 
-    /* The full-screen layout gives the main panel no padding of its own. */
+    /* The main panel supplies the page padding; this only caps the width on very wide screens. */
     max-width: 1600px;
     margin: 0 auto;
-    padding: var(--section-padding, 1.6rem);
 }
 
 /* ═══ Live status, shown in the app bar controls ═══ */

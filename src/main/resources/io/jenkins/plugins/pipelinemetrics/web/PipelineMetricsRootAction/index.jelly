@@ -5,12 +5,12 @@
     selects and buttons) so it looks and behaves like the rest of Jenkins and follows the active
     theme.
 
-    type="full-screen" gives the charts the full width. That layout has no Jenkins page header,
-    so the app bar keeps a link back to Jenkins.
+    type="one-column" gives the charts the full width while keeping the Jenkins page header, so the
+    Jenkins logo links home and the breadcrumbs work as on any other page.
 
     Styles and scripts load through <st:adjunct>, so they, and ECharts, are only added to this page.
   -->
-  <l:layout title="${%Pipeline Metrics}" type="full-screen">
+  <l:layout title="${%Pipeline Metrics}" type="one-column">
     <l:header>
       <st:adjunct includes="io.jenkins.plugins.echarts-common"/>
       <st:adjunct includes="io.jenkins.plugins.pipelinemetrics.web.PipelineMetricsRootAction.dashboard"/>
@@ -26,7 +26,6 @@
             <span id="sync-label">Live</span>
             <span id="last-updated"></span>
           </div>
-          <a class="jenkins-button" href="${rootURL}/">Jenkins</a>
           <button type="button" class="jenkins-button" id="btn-export">Export CSV</button>
           <button type="button" class="jenkins-button" id="btn-sync">Sync now</button>
           <j:if test="${it.canConfigure}">

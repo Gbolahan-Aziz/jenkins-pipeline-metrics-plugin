@@ -83,6 +83,15 @@ class PluginIntegrationTest {
                 "no chart library should load on the Jenkins home page");
     }
 
+    @Test
+    void dashboardKeepsTheJenkinsHeaderWithAHomeLink(JenkinsRule j) throws Exception {
+        // The page header carries the Jenkins logo that links home. A full-screen layout drops it.
+        String html = dashboardHtml(j);
+        assertTrue(html.contains("id=\"page-header\""), "the dashboard should render the Jenkins page header");
+        assertTrue(html.contains("href=\"/jenkins/\" class=\"app-jenkins-logo\""),
+                "the Jenkins logo should link to the Jenkins home page");
+    }
+
     private static String dashboardHtml(JenkinsRule j) throws Exception {
         JenkinsRule.WebClient webClient = j.createWebClient();
         webClient.setJavaScriptEnabled(false);
