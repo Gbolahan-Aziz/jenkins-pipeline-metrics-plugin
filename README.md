@@ -49,8 +49,7 @@ automatic backfill fills in recent history.
 
 ## Using the dashboard
 
-The dashboard header has these actions. All of them need `PipelineMetrics/Configure`, and
-**Backfill**, **Import…** and **Migrate storage…** are only shown to users who have it.
+Users with `PipelineMetrics/Configure` also see these actions in the dashboard header:
 
 | Button | What it does |
 | --- | --- |

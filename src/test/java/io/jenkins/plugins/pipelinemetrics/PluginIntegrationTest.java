@@ -13,7 +13,9 @@ import io.jenkins.plugins.pipelinemetrics.web.PipelineMetricsRootAction;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import org.junit.jupiter.api.Test;
+import jenkins.model.Jenkins;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 @WithJenkins
@@ -92,8 +94,33 @@ class PluginIntegrationTest {
                 "the Jenkins logo should link to the Jenkins home page");
     }
 
+    @Test
+    void configureActionsAreOnlyShownToUsersWhoCanConfigure(JenkinsRule j) throws Exception {
+        // Every dashboard action POSTs to an endpoint that needs Configure. Showing one to a
+        // view-only user only leads to a 403.
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy()
+                .grant(Jenkins.READ, PipelineMetricsPermissions.VIEW).everywhere().to("viewer")
+                .grant(Jenkins.ADMINISTER).everywhere().to("admin"));
+
+        String[] actions = {"btn-sync", "btn-backfill", "btn-import", "btn-migrate"};
+        String viewer = dashboardHtmlAs(j, "viewer");
+        String admin = dashboardHtmlAs(j, "admin");
+        for (String id : actions) {
+            assertFalse(viewer.contains("id=\"" + id + "\""), id + " should be hidden from a view-only user");
+            assertTrue(admin.contains("id=\"" + id + "\""), id + " should be shown to a user who can configure");
+        }
+        assertTrue(viewer.contains("id=\"btn-export\""), "CSV export only needs view permission");
+    }
+
     private static String dashboardHtml(JenkinsRule j) throws Exception {
         JenkinsRule.WebClient webClient = j.createWebClient();
+        webClient.setJavaScriptEnabled(false);
+        return webClient.goTo("pipeline-metrics", "text/html").getWebResponse().getContentAsString();
+    }
+
+    private static String dashboardHtmlAs(JenkinsRule j, String user) throws Exception {
+        JenkinsRule.WebClient webClient = j.createWebClient().login(user);
         webClient.setJavaScriptEnabled(false);
         return webClient.goTo("pipeline-metrics", "text/html").getWebResponse().getContentAsString();
     }
