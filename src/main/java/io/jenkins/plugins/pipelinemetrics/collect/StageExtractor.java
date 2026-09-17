@@ -10,12 +10,16 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.actions.LabelAction;
+import org.jenkinsci.plugins.workflow.actions.ThreadNameAction;
 import org.jenkinsci.plugins.workflow.actions.TimingAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.graph.BlockEndNode;
+import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowGraphWalker;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 
 /**
  * Extracts pipeline stage timings from a completed {@link WorkflowRun}. Stage boundaries are
@@ -47,8 +51,7 @@ public final class StageExtractor {
             Map<FlowNode, Long> blockEndTimes = new HashMap<>();
             FlowGraphWalker walker = new FlowGraphWalker(exec);
             for (FlowNode node : walker) {
-                LabelAction label = node.getAction(LabelAction.class);
-                if (label != null) {
+                if (isStageOrParallelBranch(node)) {
                     stageStarts.add(node);
                 }
                 if (node instanceof BlockEndNode) {
@@ -77,6 +80,31 @@ public final class StageExtractor {
             return new ArrayList<>();
         }
         return result;
+    }
+
+    /**
+     * Whether a flow node opens a stage or a parallel branch.
+     *
+     * <p>A {@link LabelAction} alone is not enough: a step given a {@code label}, such as
+     * {@code sh label: 'x', script: '...'}, carries one too but is an ordinary step. A stage or
+     * branch is always a block that opens a body, so the node must be a {@link BlockStartNode}. A
+     * parallel branch is then identified by its {@link ThreadNameAction}, and a stage by its step's
+     * function name. When a build loaded from disk no longer has a descriptor for its step, for
+     * example because the plugin that provided it was removed, the labelled block is kept, so old
+     * builds do not silently lose their stages.
+     */
+    private static boolean isStageOrParallelBranch(FlowNode node) {
+        if (!(node instanceof BlockStartNode) || node.getAction(LabelAction.class) == null) {
+            return false;
+        }
+        if (node.getAction(ThreadNameAction.class) != null) {
+            return true;
+        }
+        if (node instanceof StepNode stepNode) {
+            StepDescriptor descriptor = stepNode.getDescriptor();
+            return descriptor == null || "stage".equals(descriptor.getFunctionName());
+        }
+        return false;
     }
 
     private static long startTime(FlowNode node) {

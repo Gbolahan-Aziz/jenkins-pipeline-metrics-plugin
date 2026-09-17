@@ -83,13 +83,16 @@
 
   <dependencies>
     <dependency>
-      <!-- Provides Chart.js to every Jenkins page via a PageDecorator, so the dashboard gets it
-           for free instead of this plugin vendoring and hand-maintaining its own copy of a
-           third-party JS library (the update center's convention for shared frontend
-           dependencies, e.g. jquery3-api/bootstrap5-api). -->
+      <!-- ECharts for the dashboard's two trend charts. It is loaded with <st:adjunct> from the
+           dashboard view only. chartjs-api was dropped because it loads Chart.js through a
+           PageDecorator, which puts the library on every page in Jenkins, not just this one. -->
       <groupId>io.jenkins.plugins</groupId>
-      <artifactId>chartjs-api</artifactId>
-      <version>4.2.1.5</version>
+      <artifactId>echarts-api</artifactId>
+    </dependency>
+    <dependency>
+      <!-- Supplies the theme-aware symbol used as the sidebar icon. -->
+      <groupId>io.jenkins.plugins</groupId>
+      <artifactId>ionicons-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
