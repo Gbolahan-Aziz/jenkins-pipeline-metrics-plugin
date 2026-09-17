@@ -426,7 +426,8 @@ async function triggerStorageMigration() {
 // Event handlers are attached here rather than inline, since Jenkins' Content-Security-Policy
 // blocks inline event handler attributes.
 document.getElementById('btn-export').addEventListener('click', exportCSV);
-document.getElementById('btn-sync').addEventListener('click', triggerSync);
+const sync = document.getElementById('btn-sync');
+if (sync) sync.addEventListener('click', triggerSync);
 const backfill = document.getElementById('btn-backfill');
 if (backfill) backfill.addEventListener('click', triggerBackfill);
 const importBtn = document.getElementById('btn-import');

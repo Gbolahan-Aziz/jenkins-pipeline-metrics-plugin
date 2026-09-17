@@ -27,8 +27,8 @@
             <span id="last-updated"></span>
           </div>
           <button type="button" class="jenkins-button" id="btn-export">Export CSV</button>
-          <button type="button" class="jenkins-button" id="btn-sync">Sync now</button>
           <j:if test="${it.canConfigure}">
+            <button type="button" class="jenkins-button" id="btn-sync">Sync now</button>
             <button type="button" class="jenkins-button" id="btn-backfill">Backfill</button>
             <button type="button" class="jenkins-button" id="btn-import">Import…</button>
             <button type="button" class="jenkins-button" id="btn-migrate">Migrate storage…</button>
