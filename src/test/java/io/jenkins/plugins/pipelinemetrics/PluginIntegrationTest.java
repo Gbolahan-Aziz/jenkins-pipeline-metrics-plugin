@@ -54,26 +54,39 @@ class PluginIntegrationTest {
 
     @Test
     void dashboardAssetUrlsIncludeContextPath(JenkinsRule j) throws Exception {
-        // Regression test: the dashboard is a raw HTML view that doesn't use Jenkins' <l:layout>,
-        // so it has no bound "rootURL" jelly variable. Using it there silently rendered every
-        // asset/API URL without the context path (e.g. "/plugin/..." instead of
-        // "/jenkins/plugin/..."), 404ing the CSS, JS, and every dashboard API call under any
-        // non-root context path. JenkinsRule defaults to the "/jenkins" context path, matching
-        // hpi:run's own default.
-        // JS disabled: this only inspects the server-rendered HTML, and HtmlUnit's JS engine
-        // can't parse the chartjs-api-plugin's own bundled chart.umd.js anyway.
-        JenkinsRule.WebClient webClient = j.createWebClient();
-        webClient.setJavaScriptEnabled(false);
-        String html = webClient.goTo("pipeline-metrics", "text/html")
-                .getWebResponse().getContentAsString();
-        assertTrue(html.contains("\"/jenkins/plugin/pipeline-metrics/js/app.js\""),
-                "app.js must be referenced under the context path");
-        assertTrue(html.contains("\"/jenkins/plugin/pipeline-metrics/css/style.css\""),
-                "style.css must be referenced under the context path");
+        // Regression test: the dashboard's asset and API URLs must include the context path.
+        // An earlier version rendered them as "/plugin/..." instead of "/jenkins/plugin/...",
+        // which broke every asset and API call under a non-root context path. JenkinsRule uses
+        // "/jenkins", the same as hpi:run.
+        // JS disabled: this only inspects the server-rendered HTML.
+        String html = dashboardHtml(j);
+        assertTrue(html.contains("/jenkins/adjuncts/")
+                        && html.contains("PipelineMetricsRootAction/dashboard.js")
+                        && html.contains("PipelineMetricsRootAction/dashboard.css"),
+                "dashboard script and styles must load as adjuncts under the context path");
         assertTrue(html.contains("data-base=\"/jenkins/pipeline-metrics/api\""),
                 "data-base must include the context path");
         assertFalse(html.contains("\"/plugin/") || html.contains("data-base=\"/pipeline-metrics/api\""),
                 "no asset/API URL should be missing the context path");
+    }
+
+    @Test
+    void chartLibraryOnlyLoadsOnTheDashboard(JenkinsRule j) throws Exception {
+        // The chart library is only needed by the dashboard. It must not be added to every page in
+        // Jenkins, which is what happened with a PageDecorator-based chart plugin.
+        assertTrue(dashboardHtml(j).contains("echarts"), "the dashboard should load ECharts");
+
+        JenkinsRule.WebClient webClient = j.createWebClient();
+        webClient.setJavaScriptEnabled(false);
+        String home = webClient.goTo("").getWebResponse().getContentAsString();
+        assertFalse(home.contains("echarts") || home.contains("chart.umd.js"),
+                "no chart library should load on the Jenkins home page");
+    }
+
+    private static String dashboardHtml(JenkinsRule j) throws Exception {
+        JenkinsRule.WebClient webClient = j.createWebClient();
+        webClient.setJavaScriptEnabled(false);
+        return webClient.goTo("pipeline-metrics", "text/html").getWebResponse().getContentAsString();
     }
 
     private static void assertTrueEquals(String expected, String actual) {

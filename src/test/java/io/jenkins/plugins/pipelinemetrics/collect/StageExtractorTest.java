@@ -1,5 +1,6 @@
 package io.jenkins.plugins.pipelinemetrics.collect;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jenkins.plugins.pipelinemetrics.model.StageRecord;
@@ -58,5 +59,33 @@ class StageExtractorTest {
                 "fast branch duration should reflect its own ~1s sleep, was " + fastMs);
         assertTrue(slowMs >= 2500,
                 "slow branch duration should reflect its own ~3s sleep, was " + slowMs);
+    }
+
+    /**
+     * A step given a {@code label} (for example {@code sh label: 'x', script: '...'}) carries a
+     * {@code LabelAction} just like a stage does, but it is an ordinary step. It must not be
+     * recorded as a stage of its own.
+     */
+    @Test
+    void labelledStepIsNotRecordedAsAStage(JenkinsRule j) throws Exception {
+        WorkflowJob job = j.createProject(WorkflowJob.class, "labelled-step");
+        job.setDefinition(new CpsFlowDefinition(
+                "node {\n"
+              + "  stage('Build') {\n"
+              + "    if (isUnix()) {\n"
+              + "      sh label: 'labelled step', script: 'true'\n"
+              + "    } else {\n"
+              + "      bat label: 'labelled step', script: 'rem'\n"
+              + "    }\n"
+              + "  }\n"
+              + "}\n", true));
+
+        WorkflowRun run = j.buildAndAssertSuccess(job);
+
+        List<String> names = StageExtractor.extract(run).stream()
+                .map(StageRecord::getStageName)
+                .collect(Collectors.toList());
+
+        assertEquals(List.of("Build"), names, "only the real stage should be recorded");
     }
 }

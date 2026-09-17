@@ -1,0 +1,242 @@
+/*
+ * Styles for the Pipeline Metrics dashboard.
+ *
+ * Jenkins supplies the page chrome and the controls: the app bar, cards, tab bar, tables, inputs,
+ * selects and buttons all use core components and are deliberately not restyled here. What is
+ * left is what core has no component for: the KPI figures, the trend charts, the activity heatmap,
+ * and the small badges and rate bars used inside table cells.
+ *
+ * Every colour resolves to a Jenkins design token, so the page follows the controller's theme,
+ * light or dark. Each token carries a literal fallback so the page stays legible if a token is
+ * renamed upstream.
+ */
+.pm-app {
+    --pm-text: var(--text-color, #1f1f1f);
+    --pm-text-dim: var(--text-color-secondary, #6b7280);
+    --pm-green: var(--success-color, #3fb950);
+    --pm-red: var(--error-color, #f85149);
+    --pm-yellow: var(--warning-color, #d29922);
+    --pm-blue: var(--accent-color, #58a6ff);
+    --pm-border: var(--card-border-color, #e6e6e6);
+
+    /* The full-screen layout gives the main panel no padding of its own. */
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: var(--section-padding, 1.6rem);
+}
+
+/* ═══ Live status, shown in the app bar controls ═══ */
+.pm-sync-status {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--pm-text-dim);
+}
+
+.pm-sync-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--pm-green);
+    animation: pm-blink 2s ease-in-out infinite;
+}
+
+@keyframes pm-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pm-sync-dot { animation: none; }
+}
+
+/* ═══ Filters ═══ */
+.pm-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/*
+ * Core sizes .jenkins-select to fill its container, which is right inside a form but would stack
+ * these filters into full-width rows. Only the width is constrained; everything else is core's.
+ */
+.pm-filters .jenkins-select {
+    width: auto;
+    min-width: 9.5rem;
+}
+
+.pm-filter-sep {
+    width: 1px;
+    height: 1.25rem;
+    background: var(--pm-border);
+}
+
+/* ═══ Card grids ═══ */
+.pm-kpi-row,
+.pm-grid-2,
+.pm-grid-3 {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.pm-kpi-row { grid-template-columns: repeat(6, 1fr); }
+.pm-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.pm-grid-3 { grid-template-columns: 2fr 1fr; }
+
+/* ═══ KPI figures inside their cards ═══ */
+.pm-kpi-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.pm-kpi-value.pm-green { color: var(--pm-green); }
+.pm-kpi-value.pm-red { color: var(--pm-red); }
+.pm-kpi-value.pm-yellow { color: var(--pm-yellow); }
+.pm-kpi-value.pm-blue { color: var(--pm-blue); }
+
+.pm-kpi-sub,
+.pm-kpi-delta {
+    margin-top: 0.25rem;
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--pm-text-dim);
+}
+
+.pm-delta-good { color: var(--pm-green); }
+.pm-delta-bad { color: var(--pm-red); }
+
+/* ═══ Charts ═══ */
+.pm-chart {
+    width: 100%;
+    height: 260px;
+}
+
+/* ═══ Activity heatmap ═══ */
+.pm-heatmap {
+    display: grid;
+    grid-template-columns: 2.5rem repeat(24, 1fr);
+    gap: 3px;
+}
+
+.pm-heatmap-label,
+.pm-heatmap-hour {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--pm-text-dim);
+}
+
+.pm-heatmap-label {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.4rem;
+}
+
+.pm-heatmap-hour { text-align: center; }
+
+.pm-heatmap-cell {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    background: color-mix(in sRGB, var(--pm-text) 6%, transparent);
+}
+
+.pm-heatmap-cell[data-level="1"] { background: color-mix(in sRGB, var(--pm-green) 25%, transparent); }
+.pm-heatmap-cell[data-level="2"] { background: color-mix(in sRGB, var(--pm-green) 45%, transparent); }
+.pm-heatmap-cell[data-level="3"] { background: color-mix(in sRGB, var(--pm-green) 65%, transparent); }
+.pm-heatmap-cell[data-level="4"] { background: color-mix(in sRGB, var(--pm-green) 90%, transparent); }
+.pm-heatmap-cell[data-level="fail"] { background: color-mix(in sRGB, var(--pm-red) 55%, transparent); }
+
+/* ═══ Top triggerers list ═══ */
+.pm-user {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--pm-border);
+}
+
+.pm-user:last-child { border-bottom: none; }
+
+.pm-user-meta {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--pm-text-dim);
+}
+
+/* ═══ Tab bar and table filter row ═══ */
+.pm-tabs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+/* The filter uses core's .jenkins-input; only its width is set here. */
+.pm-tbl-search {
+    width: 220px;
+}
+
+/* ═══ Badges and failure-rate bars inside table cells ═══ */
+.pm-badge {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.pm-badge-green { background: color-mix(in sRGB, var(--pm-green) 18%, transparent); color: var(--pm-green); }
+.pm-badge-red { background: color-mix(in sRGB, var(--pm-red) 18%, transparent); color: var(--pm-red); }
+.pm-badge-yellow { background: color-mix(in sRGB, var(--pm-yellow) 18%, transparent); color: var(--pm-yellow); }
+.pm-badge-dim { background: color-mix(in sRGB, var(--pm-text) 8%, transparent); color: var(--pm-text-dim); }
+
+.pm-rate {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pm-rate-bar {
+    width: 4rem;
+    height: 0.35rem;
+    border-radius: 999px;
+    background: color-mix(in sRGB, var(--pm-text) 10%, transparent);
+    overflow: hidden;
+}
+
+.pm-rate-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+
+.pm-rate-fill.pm-ok { background: var(--pm-green); }
+.pm-rate-fill.pm-warn { background: var(--pm-yellow); }
+.pm-rate-fill.pm-bad { background: var(--pm-red); }
+
+.pm-mono { font-family: var(--font-family-mono, monospace); }
+
+/* ═══ Empty state ═══ */
+.pm-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--pm-text-dim);
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 1100px) {
+    .pm-kpi-row { grid-template-columns: repeat(3, 1fr); }
+    .pm-grid-2,
+    .pm-grid-3 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+    .pm-kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .pm-tabs-row { flex-direction: column; align-items: stretch; }
+    .pm-tbl-search { width: 100%; }
+}

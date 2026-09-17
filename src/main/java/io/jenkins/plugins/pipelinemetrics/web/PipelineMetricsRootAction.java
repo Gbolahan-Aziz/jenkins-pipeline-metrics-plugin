@@ -19,7 +19,8 @@ public class PipelineMetricsRootAction implements RootAction {
         if (!Jenkins.get().hasPermission(PipelineMetricsPermissions.VIEW)) {
             return null;
         }
-        return "/plugin/pipeline-metrics/images/analytics.svg";
+        // A Jenkins symbol rather than a bundled SVG, so the icon follows the active theme.
+        return "symbol-bar-chart-outline plugin-ionicons-api";
     }
 
     @Override
