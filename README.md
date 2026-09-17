@@ -1,100 +1,92 @@
-# Jenkins Pipeline Metrics Plugin
+# Pipeline Metrics Plugin
 
-A native Jenkins plugin that collects build and stage metrics in-process and serves
-an analytics dashboard inside the Jenkins UI — no external sidecar, no polling.
+A Jenkins plugin that records build and stage metrics as builds finish and shows them on a
+dashboard inside Jenkins. There is no external service to run and nothing polls the Jenkins API.
 
-## Status
+## Features
 
-Early stage. The plugin is being specced and built from an existing proof-of-concept
-"pipeline-metrics" sidecar (a FastAPI + SQLite + Jinja2 service that polled the Jenkins
-REST API). This repo is the owned, standalone home for the plugin.
+- **Captures every build** when it completes, including builds in folders and multibranch
+  projects: result, duration, queue time, agent and node labels, trigger cause, and pipeline
+  stages and parallel branches.
+- **Backfills existing history**, so the dashboard is not empty on a new install. When the store
+  has no builds at startup, a one-time backfill runs automatically, and an administrator can run
+  one at any time.
+- **Dashboard** at *Pipeline Metrics* in the Jenkins sidebar, built from Jenkins' own components
+  and following the light or dark theme:
+  - total builds, success and failure rate, average duration and queue time, and the longest build
+  - build volume and duration trend charts
+  - an activity heatmap by day and hour, and the top triggerers
+  - pipelines, agents and stages tables with a row filter
+  - filters for top-level folder, agent, user, time range, and daily, weekly or hourly grouping
+  - CSV export
+- **Storage you choose**: local SQLite by default with no setup, or an external PostgreSQL or
+  MySQL/MariaDB database. History can be migrated from local SQLite to the configured database.
+- **Retention**: records older than the retention period are removed every 6 hours.
+- **Permissions**: `PipelineMetrics/View` to see the dashboard and `PipelineMetrics/Configure`
+  to run a backfill, import or migration.
+- **Configuration as Code** support for every setting.
+- **Network storage warning**: an administrative monitor warns when local SQLite appears to be on
+  a network filesystem, where it is not safe. It never changes your configuration.
 
-## What it does
+## Requirements
 
-- Captures every build as it finishes (via `RunListener`), including folders, multibranch
-  projects, pipeline stages, agent, node labels, queue time, and trigger origin.
-- Persists metrics in a pluggable storage backend under your control (see
-  [Storage backends](#storage-backends) below) — local SQLite by default, or an external
-  PostgreSQL/MySQL/MariaDB database for network-backed `$JENKINS_HOME` or multi-controller setups.
-- Serves a dashboard as a Jenkins global root action with: overview, trends, pipelines,
-  agents, stages, heatmap, and users views — plus CSV export.
-- Gated by dedicated `PipelineMetrics/View` and `PipelineMetrics/Configure` permissions.
-- Configurable via JCasC and the management UI.
-- Migrates data between storage backends (local SQLite ↔ external database) and backfills
-  history directly from Jenkins.
-- Warns (never auto-switches) when local SQLite looks like it's running on network-backed
-  storage, where its write-ahead log is not reliably safe.
+- Jenkins 2.555.3 or newer
+- Java 21 or newer
 
-## Repository layout
-
-- `reference/pipeline-metrics-sidecar/` — the original Python sidecar, kept as the parity
-  reference for the plugin's behaviour and analytics.
-
-## License
-
-MIT — see [LICENSE](LICENSE).
-
-## Build
-
-Requires JDK 17+ and Maven 3.8+.
-
-```bash
-mvn -B verify              # compiles, runs tests + SpotBugs, produces target/pipeline-metrics.hpi
-mvn -B verify -Pdb-it      # also runs the Postgres/MariaDB dialect-parity suite via Testcontainers
-                            # (requires a local Docker daemon; not part of the default build)
-mvn -B hpi:run             # runs a local Jenkins with the plugin at http://localhost:8080/jenkins
-```
-
-The packaged plugin is `target/pipeline-metrics.hpi`.
+The JDBC drivers come from the `database-sqlite`, `postgresql-api` and `mariadb-api` plugins,
+which Jenkins installs as dependencies. Charts use `echarts-api` and icons use `ionicons-api`.
 
 ## Install
 
-Either:
+1. Build the plugin (see [Build](#build)) or download a released `pipeline-metrics.hpi`.
+2. In Jenkins, go to **Manage Jenkins › Plugins › Advanced settings › Deploy Plugin**, upload the
+   `.hpi` and restart. You can also copy the file into `$JENKINS_HOME/plugins/` before starting
+   Jenkins.
 
-1. **Plugin Manager** — Manage Jenkins → Plugins → Advanced → Deploy Plugin → upload `pipeline-metrics.hpi`, then restart.
-2. **Baked into the image** — copy the `.hpi` into `$JENKINS_HOME/plugins/` (or add it to your image's plugin list) and restart.
+After the restart, **Pipeline Metrics** appears in the sidebar for users with
+`PipelineMetrics/View`. New builds are recorded as they finish, and if the store is empty the
+automatic backfill fills in recent history.
 
-The dashboard appears in the left sidebar as **Pipeline Metrics** for users holding the `PipelineMetrics/View` permission. Metrics are captured automatically as builds finish; existing history can be backfilled directly from Jenkins via the API.
+## Using the dashboard
 
-## Configuration (JCasC)
+The dashboard header has these actions. All of them need `PipelineMetrics/Configure`, and
+**Backfill**, **Import…** and **Migrate storage…** are only shown to users who have it.
+
+| Button | What it does |
+| --- | --- |
+| **Sync now** | Re-records the latest build of every job. |
+| **Backfill** | Records up to `backfillLimit` completed builds per job, newest first, in the background. Safe to run again: builds are updated in place, not duplicated. |
+| **Import…** | Imports builds and stages from the SQLite file of the original pipeline-metrics sidecar. The path is read on the controller. |
+| **Migrate storage…** | Copies all history from the local SQLite store into the currently configured external database. Safe to run again. |
+
+**Export CSV** is available to everyone who can see the dashboard.
+
+## Configuration
+
+Settings are under **Manage Jenkins › System › Pipeline Metrics**, or in Configuration as Code:
 
 ```yaml
 unclassified:
   pipelineMetrics:
-    collectionEnabled: true
-    retentionDays: 90
-    backfillLimit: 100
-    # storageBackend omitted -> local SQLite, the zero-action default (see below)
+    collectionEnabled: true   # record builds as they finish
+    retentionDays: 90         # 1 to 365
+    backfillLimit: 100        # builds per job for a backfill, 0 to 10000
+    storageBackend:
+      sqlite: {}              # the default, can be omitted
 ```
 
 ## Storage backends
 
-Pipeline Metrics stores its data through a pluggable backend, selected under **Manage Jenkins ›
-System › Pipeline Metrics › Storage backend** (or via JCasC). Every install defaults to local
-SQLite with no configuration required — this only needs to change if your deployment topology
-doesn't fit that model.
-
 ### Local SQLite (default)
 
-An embedded, zero-dependency database at `$JENKINS_HOME/pipeline-metrics/metrics.db`. Works well
-for a single controller on local or block-storage-backed `$JENKINS_HOME` (a VM, a Docker
-container with a persistent volume, or a Kubernetes/ECS pod on a block-storage PVC/EBS volume).
+An embedded database at `$JENKINS_HOME/pipeline-metrics/metrics.db` that needs no setup. It suits
+a single controller whose `$JENKINS_HOME` is on local or block storage, such as a VM disk, a
+Docker volume, or a Kubernetes or ECS block volume.
 
-**Not safe** when `$JENKINS_HOME` sits on network storage (NFS, AWS EFS, CIFS, ...) — a common
-choice in Kubernetes/ECS specifically because it lets a pod/task reschedule without waiting on a
-block volume to detach and reattach. SQLite's write-ahead log depends on file-locking behavior
-many network filesystems don't implement reliably, which can mean write stalls or data corruption
-rather than just slower performance. It's also not safe if more than one Jenkins controller
-process ever writes to the same data. The plugin detects a likely network filesystem under
-`$JENKINS_HOME/pipeline-metrics` and raises an administrative-monitor warning in that case — it
-never switches your configuration automatically.
-
-```yaml
-unclassified:
-  pipelineMetrics:
-    storageBackend:
-      sqlite: {}
-```
+Do not use it when `$JENKINS_HOME` is on network storage such as NFS, EFS or CIFS. SQLite's
+write-ahead log relies on file locking that these filesystems do not implement reliably, which can
+cause stalled writes or a corrupted database. It is also unsafe if more than one controller writes
+to the same file. Use an external database in either case.
 
 ### External PostgreSQL
 
@@ -103,26 +95,24 @@ unclassified:
   pipelineMetrics:
     storageBackend:
       postgresql:
-        host: "pg.internal"
+        host: "pg.example.internal"
         port: 5432
         database: "jenkins_metrics"
-        credentialsId: "pipeline-metrics-db"   # a Jenkins "Username with password" credential
-        useSsl: true
-        maxPoolSize: 10
+        credentialsId: "pipeline-metrics-db"
+        useSsl: true      # default true
+        maxPoolSize: 10   # 1 to 20, default 5
 ```
 
-### External MySQL/MariaDB
+### External MySQL or MariaDB
 
-Connects with the MariaDB driver (LGPL-2.1), which speaks the MySQL wire protocol against either
-a real MySQL server or MariaDB — deliberately not the GPL-licensed MySQL Connector/J, to avoid
-bundling a GPL jar inside this plugin's `.hpi`.
+Uses the MariaDB driver, which works with both MySQL and MariaDB servers.
 
 ```yaml
 unclassified:
   pipelineMetrics:
     storageBackend:
       mysql:
-        host: "mysql.internal"
+        host: "mysql.example.internal"
         port: 3306
         database: "jenkins_metrics"
         credentialsId: "pipeline-metrics-db"
@@ -130,20 +120,59 @@ unclassified:
         maxPoolSize: 10
 ```
 
-Either external backend requires a Jenkins "Username with password" credential (`credentialsId`
-above) — the plugin never stores a database username/password directly, only that credential ID.
-An external database also removes the multi-controller restriction: it safely arbitrates
-concurrent writers, so more than one controller process can point at the same database.
+`credentialsId` must point to a Jenkins *Username with password* credential. The plugin stores
+only the credential ID, never the username or password. An external database can be shared by
+more than one controller.
 
-### Switching backends on an existing install
+### Switching backends
 
-Changing `storageBackend` only redirects *new* writes — it does not copy existing history.
-To bring history along: **Manage Jenkins › Pipeline Metrics › Migrate storage…** (or
-`POST pipeline-metrics/api/migrateStorage`, `PipelineMetrics/Configure` permission required)
-copies everything from the default local SQLite store into whichever backend is currently
-configured. It's safe to run more than once (upserts by job + build number).
+Changing `storageBackend` only affects new writes. To bring existing history across, use
+**Migrate storage…** on the dashboard, or `POST pipeline-metrics/api/migrateStorage`.
 
-## Data
+## HTTP API
 
-All state lives under `$JENKINS_HOME/pipeline-metrics/` for the local SQLite backend, or in
-whichever external database you've configured. See [Storage backends](#storage-backends).
+All endpoints are under `pipeline-metrics/api/`. Read endpoints need `PipelineMetrics/View`;
+the POST endpoints need `PipelineMetrics/Configure` and a CSRF crumb.
+
+| Method | Path | Returns |
+| --- | --- | --- |
+| GET | `filters`, `overview`, `trends`, `pipelines`, `agents`, `stages`, `heatmap`, `users` | Dashboard data as JSON |
+| GET | `report.csv` | CSV export |
+| GET | `backfillStatus` | Progress of the current or last backfill |
+| POST | `collect` | Runs **Sync now** |
+| POST | `backfill` | Starts a backfill |
+| POST | `import?path=...` | Imports a sidecar SQLite file |
+| POST | `migrateStorage` | Copies local SQLite history into the configured backend |
+
+## Build
+
+Requires JDK 21 and Maven 3.9 or newer.
+
+```bash
+mvn -B verify
+```
+
+Compiles, runs the tests and SpotBugs, and writes `target/pipeline-metrics.hpi`.
+
+```bash
+mvn -B verify -Pdb-it
+```
+
+Also runs the PostgreSQL and MariaDB tests with Testcontainers. Needs a running Docker daemon.
+
+```bash
+mvn -B hpi:run
+```
+
+Starts a local Jenkins with the plugin at http://localhost:8080/jenkins/.
+
+## Repository layout
+
+- `src/` holds the plugin.
+- `reference/pipeline-metrics-sidecar/` is the original Python sidecar (FastAPI and SQLite) this
+  plugin replaces. It is kept as a reference for the analytics and as the source format for
+  **Import…**.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
