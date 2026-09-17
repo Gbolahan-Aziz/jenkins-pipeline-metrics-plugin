@@ -43,11 +43,10 @@
     <jenkins.version>${jenkins.baseline}.3</jenkins.version>
     <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
     <!-- The JDBC drivers come from the update centre's API plugins (database-sqlite,
-         postgresql-api, mariadb-api) rather than being bundled here. What remains is the
-         connection pool, which has no API plugin, plus slf4j-api as HikariCP's own transitive
-         dependency. Pinning this list means any future, unintended library creep fails the
-         build instead of silently bloating the .hpi. -->
-    <hpi.bundledArtifacts>HikariCP,slf4j-api</hpi.bundledArtifacts>
+         postgresql-api, mariadb-api) rather than being bundled here. All that remains is the
+         connection pool, which has no API plugin. Pinning this list means any future,
+         unintended library creep fails the build instead of silently bloating the .hpi. -->
+    <hpi.bundledArtifacts>HikariCP</hpi.bundledArtifacts>
     <banObsoleteDependencyOverrides.skip>false</banObsoleteDependencyOverrides.skip>
     <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
     <ban-deprecated-stapler.skip>false</ban-deprecated-stapler.skip>
@@ -104,10 +103,6 @@
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>structs</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>credentials</artifactId>
     </dependency>
     <dependency>
@@ -121,6 +116,13 @@
       <groupId>com.zaxxer</groupId>
       <artifactId>HikariCP</artifactId>
       <version>${hikaricp.version}</version>
+      <exclusions>
+        <exclusion>
+          <!-- Jenkins core already provides slf4j-api; bundling it here would duplicate it. -->
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <!-- PostgreSQL JDBC driver, supplied by the update centre's API plugin. -->
